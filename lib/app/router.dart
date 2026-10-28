@@ -7,6 +7,7 @@ import '../features/auth/presentation/admin_login_screen.dart';
 import '../features/auth/presentation/admin_splash_screen.dart';
 import '../features/branding/presentation/branding_screen.dart';
 import '../features/questionnaire/presentation/questionnaire_screen.dart';
+import '../features/reports/presentation/reports_screen.dart';
 import '../features/rooms/presentation/rooms_screen.dart';
 import '../features/users/presentation/users_screen.dart';
 import 'admin_shell.dart';
@@ -16,6 +17,7 @@ abstract final class Routes {
   static const login = '/login';
   static const users = '/users';
   static const rooms = '/rooms';
+  static const reports = '/reports';
   static const branding = '/branding';
   static const questionnaire = '/questionnaire';
 }
@@ -61,6 +63,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(path: Routes.rooms, builder: (_, _) => const RoomsScreen()),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(path: Routes.reports, builder: (_, _) => const ReportsScreen()),
             ],
           ),
           StatefulShellBranch(

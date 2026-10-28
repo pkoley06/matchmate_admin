@@ -12,6 +12,7 @@ class AdminShell extends ConsumerWidget {
   static const _destinations = [
     (icon: Icons.people_outline, label: 'Users'),
     (icon: Icons.home_outlined, label: 'Rooms'),
+    (icon: Icons.flag_outlined, label: 'Reports'),
     (icon: Icons.palette_outlined, label: 'Branding'),
     (icon: Icons.quiz_outlined, label: 'Questionnaire'),
   ];
