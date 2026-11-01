@@ -19,18 +19,18 @@ class AdminRoomsRepository {
     int size = 20,
   }) => _api.getRooms(search: search, available: available, page: page, size: size);
 
-  Future<AdminRoomDetail> getRoom(int id) => _api.getRoom(id);
+  Future<AdminRoomDetail> getRoom(String id) => _api.getRoom(id);
 
   Future<AdminRoomDetail> createRoom(AdminRoomCreateRequest request) =>
       _api.createRoom(request);
 
   Future<AdminRoomDetail> updateRoom(
-    int id,
+    String id,
     AdminRoomUpdateRequest request,
   ) => _api.updateRoom(id, request);
 
-  Future<AdminRoomDetail> setAvailable(int id, bool available) =>
+  Future<AdminRoomDetail> setAvailable(String id, bool available) =>
       _api.setAvailable(id, available);
 
-  Future<void> deleteRoom(int id) => _api.deleteRoom(id);
+  Future<void> deleteRoom(String id) => _api.deleteRoom(id);
 }

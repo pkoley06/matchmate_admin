@@ -16,12 +16,12 @@ class AdminReport {
     this.resolvedAt,
   });
 
-  final int id;
-  final int reporterId;
+  final String id;
+  final String reporterId;
   final String reporterName;
-  final int? reportedUserId;
+  final String? reportedUserId;
   final String? reportedUserName;
-  final int? reportedListingId;
+  final String? reportedListingId;
   final String? reportedListingTitle;
   final String reportType; // 'USER' or 'LISTING'
   final String reason;     // 'SPAM', 'INAPPROPRIATE', 'SCAM', 'HARASSMENT', 'OTHER'
@@ -32,12 +32,12 @@ class AdminReport {
   final DateTime? resolvedAt;
 
   factory AdminReport.fromJson(Map<String, dynamic> json) => AdminReport(
-        id: (json['id'] as num).toInt(),
-        reporterId: (json['reporterId'] as num).toInt(),
+        id: json['id'] as String,
+        reporterId: json['reporterId'] as String,
         reporterName: (json['reporterName'] as String?) ?? 'Unknown',
-        reportedUserId: (json['reportedUserId'] as num?)?.toInt(),
+        reportedUserId: json['reportedUserId'] as String?,
         reportedUserName: json['reportedUserName'] as String?,
-        reportedListingId: (json['reportedListingId'] as num?)?.toInt(),
+        reportedListingId: json['reportedListingId'] as String?,
         reportedListingTitle: json['reportedListingTitle'] as String?,
         reportType: (json['reportType'] as String?) ?? 'USER',
         reason: (json['reason'] as String?) ?? 'OTHER',

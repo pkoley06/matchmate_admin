@@ -44,7 +44,7 @@ class AdminRoomsApi {
   }
 
   /// GET /api/v1/admin/listings/{id}
-  Future<AdminRoomDetail> getRoom(int id) async {
+  Future<AdminRoomDetail> getRoom(String id) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '/api/v1/admin/listings/$id',
@@ -70,7 +70,7 @@ class AdminRoomsApi {
 
   /// PUT /api/v1/admin/listings/{id}
   Future<AdminRoomDetail> updateRoom(
-    int id,
+    String id,
     AdminRoomUpdateRequest request,
   ) async {
     try {
@@ -85,7 +85,7 @@ class AdminRoomsApi {
   }
 
   /// PATCH /api/v1/admin/listings/{id}/available
-  Future<AdminRoomDetail> setAvailable(int id, bool available) async {
+  Future<AdminRoomDetail> setAvailable(String id, bool available) async {
     try {
       final response = await _dio.patch<Map<String, dynamic>>(
         '/api/v1/admin/listings/$id/available',
@@ -98,7 +98,7 @@ class AdminRoomsApi {
   }
 
   /// DELETE /api/v1/admin/listings/{id}
-  Future<void> deleteRoom(int id) async {
+  Future<void> deleteRoom(String id) async {
     try {
       await _dio.delete('/api/v1/admin/listings/$id');
     } on DioException catch (e) {

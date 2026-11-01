@@ -110,7 +110,7 @@ class ReportsController extends Notifier<ReportsState> {
     await loadReports(page: 0);
   }
 
-  Future<bool> resolveReport(int reportId, String action, {String? notes}) async {
+  Future<bool> resolveReport(String reportId, String action, {String? notes}) async {
     try {
       await _repo.resolveReport(
         reportId,

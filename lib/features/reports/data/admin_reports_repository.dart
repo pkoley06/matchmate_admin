@@ -28,7 +28,7 @@ class AdminReportsRepository {
   }
 
   Future<AdminReport> resolveReport(
-    int reportId,
+    String reportId,
     AdminReportResolveRequest request,
   ) {
     return _api.resolveReport(reportId, request);

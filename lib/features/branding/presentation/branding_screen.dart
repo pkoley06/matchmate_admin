@@ -66,29 +66,23 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    // Every field is sent, including empty ones: the backend stores an empty
+    // optional field as NULL, so clearing a value in this form really clears it.
     final success = await ref.read(brandingControllerProvider.notifier).updateBranding(
           AdminBrandingUpdateRequest(
             appName: _nameController.text.trim(),
             tagline: _taglineController.text.trim(),
             primaryColor: _colorController.text.trim(),
-            logoUrl: _logoController.text.trim().isEmpty ? null : _logoController.text.trim(),
-            splashImageUrl: _splashController.text.trim().isEmpty ? null : _splashController.text.trim(),
+            logoUrl: _logoController.text.trim(),
+            splashImageUrl: _splashController.text.trim(),
             supportEmail: _emailController.text.trim(),
             termsUrl: _termsController.text.trim(),
             privacyUrl: _privacyController.text.trim(),
             maintenanceMode: _maintenance,
-            googleMapsApiKey: _mapsKeyController.text.trim().isEmpty
-                ? null
-                : _mapsKeyController.text.trim(),
-            developerUpiId: _developerUpiController.text.trim().isEmpty
-                ? null
-                : _developerUpiController.text.trim(),
-            developerQrCodeUrl: _developerQrCodeController.text.trim().isEmpty
-                ? null
-                : _developerQrCodeController.text.trim(),
-            developerSupportNote: _developerNoteController.text.trim().isEmpty
-                ? null
-                : _developerNoteController.text.trim(),
+            googleMapsApiKey: _mapsKeyController.text.trim(),
+            developerUpiId: _developerUpiController.text.trim(),
+            developerQrCodeUrl: _developerQrCodeController.text.trim(),
+            developerSupportNote: _developerNoteController.text.trim(),
           ),
         );
 

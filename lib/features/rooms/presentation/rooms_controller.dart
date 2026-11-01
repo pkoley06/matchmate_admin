@@ -82,40 +82,20 @@ class RoomsController extends Notifier<RoomsState> {
     }
   }
 
-  Future<void> toggleAvailability(int roomId, bool currentAvailable) async {
+  Future<void> toggleAvailability(String roomId, bool currentAvailable) async {
     try {
       final updated = await _repository.setAvailable(roomId, !currentAvailable);
-      if (state.pageData != null) {
-        final updatedContent = state.pageData!.content.map((r) {
-          if (r.id == roomId) {
-            return AdminRoomSummary(
-              id: r.id,
-              title: r.title,
-              hostUserId: r.hostUserId,
-              hostUserName: r.hostUserName,
-              listingType: r.listingType,
-              roomType: r.roomType,
-              furnishingStatus: r.furnishingStatus,
-              rentAmount: r.rentAmount,
-              depositAmount: r.depositAmount,
-              localityName: r.localityName,
-              city: r.city,
-              isAvailable: updated.isAvailable,
-              photoUrls: r.photoUrls,
-              createdAt: r.createdAt,
-            );
-          }
-          return r;
-        }).toList();
-
+      final page = state.pageData;
+      if (page != null) {
         state = state.copyWith(
-          pageData: AdminRoomPage(
-            content: updatedContent,
-            page: state.pageData!.page,
-            size: state.pageData!.size,
-            totalElements: state.pageData!.totalElements,
-            totalPages: state.pageData!.totalPages,
-            isLast: state.pageData!.isLast,
+          pageData: page.copyWith(
+            content: page.content
+                .map(
+                  (r) => r.id == roomId
+                      ? r.copyWith(isAvailable: updated.isAvailable)
+                      : r,
+                )
+                .toList(),
           ),
         );
       }
@@ -124,7 +104,7 @@ class RoomsController extends Notifier<RoomsState> {
     }
   }
 
-  Future<bool> deleteRoom(int roomId) async {
+  Future<bool> deleteRoom(String roomId) async {
     try {
       await _repository.deleteRoom(roomId);
       await loadRooms();
@@ -135,7 +115,7 @@ class RoomsController extends Notifier<RoomsState> {
     }
   }
 
-  Future<AdminRoomDetail?> fetchDetail(int roomId) async {
+  Future<AdminRoomDetail?> fetchDetail(String roomId) async {
     try {
       return await _repository.getRoom(roomId);
     } catch (e) {

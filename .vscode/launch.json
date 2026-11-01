@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "MatchMate Admin (OCI Backend)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "chrome",
+      "args": [
+        "--dart-define=API_BASE_URL=http://130.210.45.27"
+      ]
+    },
+    {
+      "name": "MatchMate Admin (Localhost)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "chrome",
+      "args": [
+        "--dart-define=API_BASE_URL=http://localhost:8080"
+      ]
+    }
+  ]
+}

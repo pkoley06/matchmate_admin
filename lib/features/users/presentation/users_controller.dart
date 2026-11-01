@@ -75,85 +75,49 @@ class UsersController extends Notifier<UsersState> {
     }
   }
 
-  Future<void> toggleActive(int userId, bool currentStatus) async {
+  Future<void> toggleActive(String userId, bool currentStatus) async {
     try {
       final updated = await _repository.setActive(userId, !currentStatus);
-      if (state.pageData != null) {
-        final updatedContent = state.pageData!.content.map((u) {
-          if (u.id == userId) {
-            return AdminUserSummary(
-              id: u.id,
-              fullName: u.fullName,
-              gender: u.gender,
-              age: u.age,
-              lastKnownLocality: u.lastKnownLocality,
-              primaryAuthProvider: u.primaryAuthProvider,
-              isActive: updated.isActive,
-              isSuspended: updated.isSuspended,
-              suspendedReason: updated.suspendedReason,
-              onboardingCompleted: u.onboardingCompleted,
-              createdAt: u.createdAt,
-            );
-          }
-          return u;
-        }).toList();
-
-        state = state.copyWith(
-          pageData: AdminUserPage(
-            content: updatedContent,
-            page: state.pageData!.page,
-            size: state.pageData!.size,
-            totalElements: state.pageData!.totalElements,
-            totalPages: state.pageData!.totalPages,
-            isLast: state.pageData!.isLast,
-          ),
-        );
-      }
+      _mergeModeration(userId, updated);
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
   }
 
-  Future<void> toggleSuspend(int userId, bool currentSuspended, {String? reason}) async {
+  Future<void> toggleSuspend(String userId, bool currentSuspended, {String? reason}) async {
     try {
       final updated = await _repository.setSuspended(userId, !currentSuspended, reason: reason);
-      if (state.pageData != null) {
-        final updatedContent = state.pageData!.content.map((u) {
-          if (u.id == userId) {
-            return AdminUserSummary(
-              id: u.id,
-              fullName: u.fullName,
-              gender: u.gender,
-              age: u.age,
-              lastKnownLocality: u.lastKnownLocality,
-              primaryAuthProvider: u.primaryAuthProvider,
-              isActive: updated.isActive,
-              isSuspended: updated.isSuspended,
-              suspendedReason: updated.suspendedReason,
-              onboardingCompleted: u.onboardingCompleted,
-              createdAt: u.createdAt,
-            );
-          }
-          return u;
-        }).toList();
-
-        state = state.copyWith(
-          pageData: AdminUserPage(
-            content: updatedContent,
-            page: state.pageData!.page,
-            size: state.pageData!.size,
-            totalElements: state.pageData!.totalElements,
-            totalPages: state.pageData!.totalPages,
-            isLast: state.pageData!.isLast,
-          ),
-        );
-      }
+      _mergeModeration(userId, updated);
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
   }
 
-  Future<AdminUserDetail?> fetchDetail(int userId) async {
+  /// Copies the moderation fields the server just confirmed onto the row in
+  /// the current page so the list reflects it without a reload.
+  void _mergeModeration(String userId, AdminUserDetail updated) {
+    final page = state.pageData;
+    if (page == null) return;
+    state = state.copyWith(
+      pageData: page.copyWith(
+        content: page.content
+            .map(
+              (u) => u.id == userId
+                  ? u.copyWith(
+                      isActive: updated.isActive,
+                      accountStatus: updated.accountStatus,
+                      isSuspended: updated.isSuspended,
+                      suspendedReason: updated.suspendedReason,
+                      clearSuspendedReason: updated.suspendedReason == null,
+                    )
+                  : u,
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  Future<AdminUserDetail?> fetchDetail(String userId) async {
     try {
       return await _repository.getUser(userId);
     } catch (e) {
@@ -173,7 +137,7 @@ class UsersController extends Notifier<UsersState> {
     }
   }
 
-  Future<bool> updateUser(int id, AdminUserUpdateRequest request) async {
+  Future<bool> updateUser(String id, AdminUserUpdateRequest request) async {
     try {
       await _repository.updateUser(id, request);
       await loadUsers();

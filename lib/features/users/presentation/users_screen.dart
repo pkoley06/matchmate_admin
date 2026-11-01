@@ -355,28 +355,16 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                         onPressed: () => _confirmSuspend(user),
                                       ),
                                     ],
-                                    ActionChip(
-                                      avatar: Icon(
-                                        user.isActive
-                                            ? Icons.check_circle
-                                            : Icons.cancel,
-                                        size: 16,
-                                        color: user.isActive
-                                            ? Colors.green
-                                            : Colors.red,
-                                      ),
-                                      label: Text(
-                                        user.isActive ? 'Active' : 'Disabled',
-                                        style: TextStyle(
-                                          color: user.isActive
-                                              ? Colors.green.shade800
-                                              : Colors.red.shade800,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      onPressed: () => ref
-                                          .read(usersControllerProvider.notifier)
-                                          .toggleActive(user.id, user.isActive),
+                                    _AccountStatusChip(
+                                      status: user.accountStatus,
+                                      // A deleted account is terminal; only
+                                      // ACTIVE <-> DISABLED can be toggled.
+                                      onPressed: user.accountStatus ==
+                                              AdminAccountStatus.deleted
+                                          ? null
+                                          : () => ref
+                                              .read(usersControllerProvider.notifier)
+                                              .toggleActive(user.id, user.isActive),
                                     ),
                                     const SizedBox(width: 8),
                                     IconButton(
@@ -506,7 +494,67 @@ class _UserDetailDialog extends StatelessWidget {
               _infoTile('Guest Tolerance', detail.guestTolerance ?? 'Unanswered'),
               const Divider(height: 24),
               _infoTile('Onboarding Completed', detail.onboardingCompleted ? 'Yes' : 'No'),
-              _infoTile('Status', detail.isActive ? 'Active' : 'Disabled'),
+              _infoTile(
+                'Room Finder Mode',
+                switch (detail.isLookingForRoom) {
+                  true => 'On (looking for a room)',
+                  false => 'Off',
+                  null => 'Unknown',
+                },
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    const SizedBox(
+                      width: 160,
+                      child: Text(
+                        'Account Status',
+                        style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey),
+                      ),
+                    ),
+                    _AccountStatusChip(status: detail.accountStatus),
+                    if (detail.disabledAt != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        'since ${_formatDate(detail.disabledAt!)}',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const Divider(height: 24),
+              Text(
+                'Notification Preferences',
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Read-only. The user controls these from Settings in the app.',
+                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+              ),
+              const SizedBox(height: 4),
+              _NotificationPreferenceRow(
+                icon: Icons.favorite_border,
+                label: 'Likes & Comments',
+                value: detail.notificationPreferences.likesComments,
+              ),
+              _NotificationPreferenceRow(
+                icon: Icons.chat_bubble_outline,
+                label: 'Messages & Chat',
+                value: detail.notificationPreferences.messages,
+              ),
+              _NotificationPreferenceRow(
+                icon: Icons.person_search_outlined,
+                label: 'Room Seekers Nearby',
+                value: detail.notificationPreferences.seekersNearby,
+              ),
+              _NotificationPreferenceRow(
+                icon: Icons.home_work_outlined,
+                label: 'Rooms Listed Nearby',
+                value: detail.notificationPreferences.roomsNearby,
+              ),
             ],
           ),
         ),
@@ -538,6 +586,64 @@ class _UserDetailDialog extends StatelessWidget {
       ),
     );
   }
+}
+
+/// ACTIVE / DISABLED / DELETED pill. Pressable only when [onPressed] is set.
+class _AccountStatusChip extends StatelessWidget {
+  const _AccountStatusChip({required this.status, this.onPressed});
+
+  final AdminAccountStatus status;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, color) = switch (status) {
+      AdminAccountStatus.active => (Icons.check_circle, Colors.green),
+      AdminAccountStatus.disabled => (Icons.cancel, Colors.red),
+      AdminAccountStatus.deleted => (Icons.delete_forever, Colors.grey),
+    };
+    return ActionChip(
+      avatar: Icon(icon, size: 16, color: color),
+      label: Text(
+        status.label,
+        style: TextStyle(color: color.shade800, fontWeight: FontWeight.w600),
+      ),
+      onPressed: onPressed,
+    );
+  }
+}
+
+class _NotificationPreferenceRow extends StatelessWidget {
+  const _NotificationPreferenceRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.grey),
+          const SizedBox(width: 10),
+          Expanded(child: Text(label)),
+          Switch.adaptive(value: value, onChanged: null),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatDate(DateTime dt) {
+  final local = dt.toLocal();
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${local.year}-${two(local.month)}-${two(local.day)} ${two(local.hour)}:${two(local.minute)}';
 }
 
 class _UserFormDialog extends ConsumerStatefulWidget {

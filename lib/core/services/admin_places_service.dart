@@ -26,6 +26,8 @@ class AdminPlaceLocation {
     this.address,
     this.locality,
     this.city,
+    this.stateName,
+    this.postalCode,
   });
 
   final double latitude;
@@ -34,12 +36,71 @@ class AdminPlaceLocation {
   final String? address;
   final String? locality;
   final String? city;
+  final String? stateName;
+  final String? postalCode;
+}
+
+/// The pieces of a Google `addressComponents` array the listing form needs.
+class _GoogleAddressParts {
+  const _GoogleAddressParts({
+    this.subLocality,
+    this.locality,
+    this.subAdminArea,
+    this.adminArea,
+    this.postalCode,
+  });
+
+  final String? subLocality;
+  final String? locality;
+  final String? subAdminArea;
+  final String? adminArea;
+  final String? postalCode;
+
+  /// Same precedence as the mobile reverse geocoder: locality first, then the
+  /// district, so a suburb pick still resolves to its city.
+  String? get city => locality ?? subAdminArea;
+
+  static _GoogleAddressParts parse(List<dynamic>? components) {
+    String? subLocality;
+    String? locality;
+    String? subAdminArea;
+    String? adminArea;
+    String? postalCode;
+    for (final raw in components ?? const []) {
+      final c = raw as Map<String, dynamic>;
+      final types = (c['types'] as List<dynamic>? ?? const []).cast<String>();
+      final text = c['longText'] as String? ?? c['shortText'] as String?;
+      if (text == null || text.isEmpty) continue;
+      if (types.contains('postal_code')) {
+        postalCode ??= text;
+      } else if (types.contains('administrative_area_level_1')) {
+        adminArea ??= text;
+      } else if (types.contains('administrative_area_level_2')) {
+        subAdminArea ??= text;
+      } else if (types.contains('locality')) {
+        locality ??= text;
+      } else if (types.contains('sublocality') ||
+          types.contains('sublocality_level_1') ||
+          types.contains('neighborhood')) {
+        subLocality ??= text;
+      }
+    }
+    return _GoogleAddressParts(
+      subLocality: subLocality,
+      locality: locality,
+      subAdminArea: subAdminArea,
+      adminArea: adminArea,
+      postalCode: postalCode,
+    );
+  }
 }
 
 class AdminPlacesService {
   AdminPlacesService();
 
-  String? _apiKey = 'AIzaSyBhuUTfle47F2pikumX3W5s99IHq0IIm3U';
+  /// Set from Admin → Branding (`AppBranding.googleMapsApiKey`) at runtime.
+  /// Never hardcode a key here; without one the service falls back to OSM.
+  String? _apiKey;
   final Dio _dio = Dio(
     BaseOptions(
       connectTimeout: const Duration(seconds: 8),
@@ -210,6 +271,9 @@ class AdminPlacesService {
         final name =
             (data['displayName'] as Map<String, dynamic>?)?['text'] as String?;
         final address = data['formattedAddress'] as String?;
+        final parts = _GoogleAddressParts.parse(
+          data['addressComponents'] as List<dynamic>?,
+        );
 
         if (lat != null && lng != null) {
           return AdminPlaceLocation(
@@ -217,8 +281,10 @@ class AdminPlacesService {
             longitude: lng,
             name: name,
             address: address,
-            locality: name,
-            city: address?.split(',').last.trim(),
+            locality: parts.subLocality ?? name,
+            city: parts.city,
+            stateName: parts.adminArea,
+            postalCode: parts.postalCode,
           );
         }
       }
@@ -266,8 +332,10 @@ class AdminPlacesService {
           longitude: lng,
           name: name,
           address: fullText,
-          locality: name,
-          city: props['city'] as String? ?? props['state'] as String?,
+          locality: props['district'] as String? ?? name,
+          city: props['city'] as String? ?? props['county'] as String?,
+          stateName: props['state'] as String?,
+          postalCode: props['postcode'] as String?,
         );
 
         results.add(

@@ -39,7 +39,7 @@ class AdminReportsApi {
   }
 
   Future<AdminReport> resolveReport(
-    int reportId,
+    String reportId,
     AdminReportResolveRequest request,
   ) async {
     try {

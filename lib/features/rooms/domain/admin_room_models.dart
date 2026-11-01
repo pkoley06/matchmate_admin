@@ -1,3 +1,21 @@
+/// Mirrors the backend `GenderPreference` enum. [all] is "open to everyone".
+enum AdminGenderPreference {
+  all('ALL', 'Open to all genders'),
+  male('MALE', 'Male only'),
+  female('FEMALE', 'Female only'),
+  nonBinary('NON_BINARY', 'Non-binary'),
+  other('OTHER', 'Other');
+
+  const AdminGenderPreference(this.apiValue, this.label);
+  final String apiValue;
+  final String label;
+
+  bool get isOpenToAll => this == all;
+
+  static AdminGenderPreference fromApiValue(String? v) =>
+      values.firstWhere((e) => e.apiValue == v, orElse: () => all);
+}
+
 class AdminRoomSummary {
   const AdminRoomSummary({
     required this.id,
@@ -11,14 +29,17 @@ class AdminRoomSummary {
     this.depositAmount,
     this.localityName,
     this.city,
+    this.stateName,
+    this.postalCode,
+    this.genderPreference = AdminGenderPreference.all,
     required this.isAvailable,
     this.photoUrls = const [],
     this.createdAt,
   });
 
-  final int id;
+  final String id;
   final String title;
-  final int hostUserId;
+  final String hostUserId;
   final String? hostUserName;
   final String? listingType;
   final String? roomType;
@@ -27,15 +48,44 @@ class AdminRoomSummary {
   final int? depositAmount;
   final String? localityName;
   final String? city;
+  final String? stateName;
+  final String? postalCode;
+  final AdminGenderPreference genderPreference;
   final bool isAvailable;
   final List<String> photoUrls;
   final DateTime? createdAt;
 
+  /// "Koramangala, Bengaluru" — only the parts the geocoder resolved.
+  String get placeLabel => [
+        if (localityName?.isNotEmpty == true) localityName!,
+        if (city?.isNotEmpty == true) city!,
+      ].join(', ');
+
+  AdminRoomSummary copyWith({bool? isAvailable}) => AdminRoomSummary(
+        id: id,
+        title: title,
+        hostUserId: hostUserId,
+        hostUserName: hostUserName,
+        listingType: listingType,
+        roomType: roomType,
+        furnishingStatus: furnishingStatus,
+        rentAmount: rentAmount,
+        depositAmount: depositAmount,
+        localityName: localityName,
+        city: city,
+        stateName: stateName,
+        postalCode: postalCode,
+        genderPreference: genderPreference,
+        isAvailable: isAvailable ?? this.isAvailable,
+        photoUrls: photoUrls,
+        createdAt: createdAt,
+      );
+
   factory AdminRoomSummary.fromJson(Map<String, dynamic> json) =>
       AdminRoomSummary(
-        id: (json['id'] as num).toInt(),
+        id: json['id'] as String,
         title: (json['title'] as String?) ?? '',
-        hostUserId: (json['hostUserId'] as num?)?.toInt() ?? 0,
+        hostUserId: (json['hostUserId'] as String?) ?? '',
         hostUserName: json['hostUserName'] as String?,
         listingType: json['listingType'] as String?,
         roomType: json['roomType'] as String?,
@@ -44,6 +94,11 @@ class AdminRoomSummary {
         depositAmount: (json['depositAmount'] as num?)?.toInt(),
         localityName: json['localityName'] as String?,
         city: json['city'] as String?,
+        stateName: json['stateName'] as String?,
+        postalCode: json['postalCode'] as String?,
+        genderPreference: AdminGenderPreference.fromApiValue(
+          json['genderPreference'] as String?,
+        ),
         isAvailable: json['isAvailable'] as bool? ?? true,
         photoUrls: (json['photoUrls'] as List<dynamic>? ?? [])
             .map((e) => e.toString())
@@ -70,18 +125,20 @@ class AdminRoomDetail {
     this.longitude,
     this.localityName,
     this.city,
+    this.stateName,
+    this.postalCode,
     this.description,
     this.photoUrls = const [],
     this.moveInDate,
     this.amenities = const [],
-    this.openToAllGenders = true,
+    this.genderPreference = AdminGenderPreference.all,
     required this.isAvailable,
     this.createdAt,
     this.updatedAt,
   });
 
-  final int id;
-  final int hostUserId;
+  final String id;
+  final String hostUserId;
   final String? hostUserName;
   final String? hostAvatarUrl;
   final String? listingType;
@@ -94,19 +151,23 @@ class AdminRoomDetail {
   final double? longitude;
   final String? localityName;
   final String? city;
+  final String? stateName;
+  final String? postalCode;
   final String? description;
   final List<String> photoUrls;
   final String? moveInDate;
   final List<String> amenities;
-  final bool openToAllGenders;
+  final AdminGenderPreference genderPreference;
   final bool isAvailable;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  bool get openToAllGenders => genderPreference.isOpenToAll;
+
   factory AdminRoomDetail.fromJson(Map<String, dynamic> json) =>
       AdminRoomDetail(
-        id: (json['id'] as num).toInt(),
-        hostUserId: (json['hostUserId'] as num?)?.toInt() ?? 0,
+        id: json['id'] as String,
+        hostUserId: (json['hostUserId'] as String?) ?? '',
         hostUserName: json['hostUserName'] as String?,
         hostAvatarUrl: json['hostAvatarUrl'] as String?,
         listingType: json['listingType'] as String?,
@@ -119,6 +180,8 @@ class AdminRoomDetail {
         longitude: (json['longitude'] as num?)?.toDouble(),
         localityName: json['localityName'] as String?,
         city: json['city'] as String?,
+        stateName: json['stateName'] as String?,
+        postalCode: json['postalCode'] as String?,
         description: json['description'] as String?,
         photoUrls: (json['photoUrls'] as List<dynamic>? ?? [])
             .map((e) => e.toString())
@@ -127,7 +190,13 @@ class AdminRoomDetail {
         amenities: (json['amenities'] as List<dynamic>? ?? [])
             .map((e) => e.toString())
             .toList(),
-        openToAllGenders: json['openToAllGenders'] as bool? ?? true,
+        genderPreference: json['genderPreference'] != null
+            ? AdminGenderPreference.fromApiValue(
+                json['genderPreference'] as String?,
+              )
+            : (json['openToAllGenders'] as bool? ?? true)
+                ? AdminGenderPreference.all
+                : AdminGenderPreference.other,
         isAvailable: json['isAvailable'] as bool? ?? true,
         createdAt: json['createdAt'] != null
             ? DateTime.tryParse(json['createdAt'] as String)
@@ -155,6 +224,15 @@ class AdminRoomPage {
   final int totalPages;
   final bool isLast;
 
+  AdminRoomPage copyWith({List<AdminRoomSummary>? content}) => AdminRoomPage(
+        content: content ?? this.content,
+        page: page,
+        size: size,
+        totalElements: totalElements,
+        totalPages: totalPages,
+        isLast: isLast,
+      );
+
   factory AdminRoomPage.fromJson(Map<String, dynamic> json) => AdminRoomPage(
         content: (json['content'] as List<dynamic>? ?? [])
             .map((e) => AdminRoomSummary.fromJson(e as Map<String, dynamic>))
@@ -180,15 +258,17 @@ class AdminRoomCreateRequest {
     required this.longitude,
     required this.localityName,
     required this.city,
+    this.stateName,
+    this.postalCode,
     this.description,
     this.photoUrls = const [],
     this.moveInDate,
     this.amenities = const [],
-    this.openToAllGenders = true,
+    this.genderPreference = AdminGenderPreference.all,
     this.isAvailable = true,
   });
 
-  final int hostUserId;
+  final String hostUserId;
   final String listingType;
   final String title;
   final int rentAmount;
@@ -199,11 +279,13 @@ class AdminRoomCreateRequest {
   final double longitude;
   final String localityName;
   final String city;
+  final String? stateName;
+  final String? postalCode;
   final String? description;
   final List<String> photoUrls;
   final String? moveInDate;
   final List<String> amenities;
-  final bool openToAllGenders;
+  final AdminGenderPreference genderPreference;
   final bool isAvailable;
 
   Map<String, dynamic> toJson() => {
@@ -218,11 +300,13 @@ class AdminRoomCreateRequest {
         'longitude': longitude,
         'localityName': localityName,
         'city': city,
+        if (stateName?.isNotEmpty == true) 'stateName': stateName,
+        if (postalCode?.isNotEmpty == true) 'postalCode': postalCode,
         if (description != null) 'description': description,
         'photoUrls': photoUrls,
         if (moveInDate != null) 'moveInDate': moveInDate,
         'amenities': amenities,
-        'openToAllGenders': openToAllGenders,
+        'genderPreference': genderPreference.apiValue,
         'isAvailable': isAvailable,
       };
 }
@@ -239,11 +323,13 @@ class AdminRoomUpdateRequest {
     this.longitude,
     this.localityName,
     this.city,
+    this.stateName,
+    this.postalCode,
     this.description,
     this.photoUrls,
     this.moveInDate,
     this.amenities,
-    this.openToAllGenders,
+    this.genderPreference,
     this.isAvailable,
   });
 
@@ -257,11 +343,13 @@ class AdminRoomUpdateRequest {
   final double? longitude;
   final String? localityName;
   final String? city;
+  final String? stateName;
+  final String? postalCode;
   final String? description;
   final List<String>? photoUrls;
   final String? moveInDate;
   final List<String>? amenities;
-  final bool? openToAllGenders;
+  final AdminGenderPreference? genderPreference;
   final bool? isAvailable;
 
   Map<String, dynamic> toJson() => {
@@ -275,11 +363,14 @@ class AdminRoomUpdateRequest {
         if (longitude != null) 'longitude': longitude,
         if (localityName != null) 'localityName': localityName,
         if (city != null) 'city': city,
+        if (stateName != null) 'stateName': stateName,
+        if (postalCode != null) 'postalCode': postalCode,
         if (description != null) 'description': description,
         if (photoUrls != null) 'photoUrls': photoUrls,
         if (moveInDate != null) 'moveInDate': moveInDate,
         if (amenities != null) 'amenities': amenities,
-        if (openToAllGenders != null) 'openToAllGenders': openToAllGenders,
+        if (genderPreference != null)
+          'genderPreference': genderPreference!.apiValue,
         if (isAvailable != null) 'isAvailable': isAvailable,
       };
 }

@@ -1,3 +1,50 @@
+/// Mirrors backend `AccountStatus`.
+enum AdminAccountStatus {
+  active('ACTIVE', 'Active'),
+  disabled('DISABLED', 'Disabled'),
+  deleted('DELETED', 'Deleted');
+
+  const AdminAccountStatus(this.apiValue, this.label);
+  final String apiValue;
+  final String label;
+
+  static AdminAccountStatus fromJson(String? value, {required bool isActive}) {
+    for (final s in values) {
+      if (s.apiValue == value) return s;
+    }
+    // Older payloads only carry the boolean.
+    return isActive ? active : disabled;
+  }
+}
+
+/// Per-user push categories as the admin sees them (read-only).
+class AdminNotificationPreferences {
+  const AdminNotificationPreferences({
+    this.likesComments = true,
+    this.messages = true,
+    this.seekersNearby = true,
+    this.roomsNearby = true,
+    this.updatedAt,
+  });
+
+  final bool likesComments;
+  final bool messages;
+  final bool seekersNearby;
+  final bool roomsNearby;
+  final DateTime? updatedAt;
+
+  factory AdminNotificationPreferences.fromJson(Map<String, dynamic> json) =>
+      AdminNotificationPreferences(
+        likesComments: json['notifyLikesComments'] as bool? ?? true,
+        messages: json['notifyMessages'] as bool? ?? true,
+        seekersNearby: json['notifySeekersNearby'] as bool? ?? true,
+        roomsNearby: json['notifyRoomsNearby'] as bool? ?? true,
+        updatedAt: json['updatedAt'] != null
+            ? DateTime.tryParse(json['updatedAt'] as String)
+            : null,
+      );
+}
+
 class AdminUserSummary {
   const AdminUserSummary({
     required this.id,
@@ -7,40 +54,72 @@ class AdminUserSummary {
     this.lastKnownLocality,
     this.primaryAuthProvider,
     required this.isActive,
+    this.accountStatus = AdminAccountStatus.active,
     this.isSuspended = false,
     this.suspendedReason,
     required this.onboardingCompleted,
     this.createdAt,
   });
 
-  final int id;
+  final String id;
   final String fullName;
   final String? gender;
   final int? age;
   final String? lastKnownLocality;
   final String? primaryAuthProvider;
   final bool isActive;
+  final AdminAccountStatus accountStatus;
   final bool isSuspended;
   final String? suspendedReason;
   final bool onboardingCompleted;
   final DateTime? createdAt;
 
-  factory AdminUserSummary.fromJson(Map<String, dynamic> json) =>
+  AdminUserSummary copyWith({
+    bool? isActive,
+    AdminAccountStatus? accountStatus,
+    bool? isSuspended,
+    String? suspendedReason,
+    bool clearSuspendedReason = false,
+  }) =>
       AdminUserSummary(
-        id: (json['id'] as num).toInt(),
-        fullName: (json['fullName'] as String?) ?? '',
-        gender: json['gender'] as String?,
-        age: json['age'] as int?,
-        lastKnownLocality: json['lastKnownLocality'] as String?,
-        primaryAuthProvider: json['primaryAuthProvider'] as String?,
-        isActive: json['isActive'] as bool? ?? true,
-        isSuspended: json['isSuspended'] as bool? ?? false,
-        suspendedReason: json['suspendedReason'] as String?,
-        onboardingCompleted: json['onboardingCompleted'] as bool? ?? false,
-        createdAt: json['createdAt'] != null
-            ? DateTime.tryParse(json['createdAt'] as String)
-            : null,
+        id: id,
+        fullName: fullName,
+        gender: gender,
+        age: age,
+        lastKnownLocality: lastKnownLocality,
+        primaryAuthProvider: primaryAuthProvider,
+        isActive: isActive ?? this.isActive,
+        accountStatus: accountStatus ?? this.accountStatus,
+        isSuspended: isSuspended ?? this.isSuspended,
+        suspendedReason: clearSuspendedReason
+            ? null
+            : (suspendedReason ?? this.suspendedReason),
+        onboardingCompleted: onboardingCompleted,
+        createdAt: createdAt,
       );
+
+  factory AdminUserSummary.fromJson(Map<String, dynamic> json) {
+    final isActive = json['isActive'] as bool? ?? true;
+    return AdminUserSummary(
+      id: json['id'] as String,
+      fullName: (json['fullName'] as String?) ?? '',
+      gender: json['gender'] as String?,
+      age: (json['age'] as num?)?.toInt(),
+      lastKnownLocality: json['lastKnownLocality'] as String?,
+      primaryAuthProvider: json['primaryAuthProvider'] as String?,
+      isActive: isActive,
+      accountStatus: AdminAccountStatus.fromJson(
+        json['accountStatus'] as String?,
+        isActive: isActive,
+      ),
+      isSuspended: json['isSuspended'] as bool? ?? false,
+      suspendedReason: json['suspendedReason'] as String?,
+      onboardingCompleted: json['onboardingCompleted'] as bool? ?? false,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'] as String)
+          : null,
+    );
+  }
 }
 
 class AdminUserDetail {
@@ -62,14 +141,18 @@ class AdminUserDetail {
     this.lastKnownLocality,
     this.primaryAuthProvider,
     required this.isActive,
+    this.accountStatus = AdminAccountStatus.active,
+    this.disabledAt,
     this.isSuspended = false,
     this.suspendedReason,
     required this.onboardingCompleted,
+    this.isLookingForRoom,
+    this.notificationPreferences = const AdminNotificationPreferences(),
     this.createdAt,
     this.updatedAt,
   });
 
-  final int id;
+  final String id;
   final String fullName;
   final String? gender;
   final String? dateOfBirth;
@@ -86,41 +169,61 @@ class AdminUserDetail {
   final String? lastKnownLocality;
   final String? primaryAuthProvider;
   final bool isActive;
+  final AdminAccountStatus accountStatus;
+  final DateTime? disabledAt;
   final bool isSuspended;
   final String? suspendedReason;
   final bool onboardingCompleted;
+
+  /// Room Finder Mode (`is_room_seeker`), null when the server didn't send it.
+  final bool? isLookingForRoom;
+  final AdminNotificationPreferences notificationPreferences;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  factory AdminUserDetail.fromJson(Map<String, dynamic> json) =>
-      AdminUserDetail(
-        id: (json['id'] as num).toInt(),
-        fullName: (json['fullName'] as String?) ?? '',
-        gender: json['gender'] as String?,
-        dateOfBirth: json['dateOfBirth'] as String?,
-        age: json['age'] as int?,
-        avatarUrl: json['avatarUrl'] as String?,
-        occupationCategory: json['occupationCategory'] as String?,
-        occupationTitle: json['occupationTitle'] as String?,
-        bio: json['bio'] as String?,
-        smokingHabit: json['smokingHabit'] as String?,
-        dietaryPreference: json['dietaryPreference'] as String?,
-        sleepSchedule: json['sleepSchedule'] as String?,
-        cleanlinessLevel: json['cleanlinessLevel'] as String?,
-        guestTolerance: json['guestTolerance'] as String?,
-        lastKnownLocality: json['lastKnownLocality'] as String?,
-        primaryAuthProvider: json['primaryAuthProvider'] as String?,
-        isActive: json['isActive'] as bool? ?? true,
-        isSuspended: json['isSuspended'] as bool? ?? false,
-        suspendedReason: json['suspendedReason'] as String?,
-        onboardingCompleted: json['onboardingCompleted'] as bool? ?? false,
-        createdAt: json['createdAt'] != null
-            ? DateTime.tryParse(json['createdAt'] as String)
-            : null,
-        updatedAt: json['updatedAt'] != null
-            ? DateTime.tryParse(json['updatedAt'] as String)
-            : null,
-      );
+  factory AdminUserDetail.fromJson(Map<String, dynamic> json) {
+    final isActive = json['isActive'] as bool? ?? true;
+    final prefs = json['notificationPreferences'];
+    return AdminUserDetail(
+      id: json['id'] as String,
+      fullName: (json['fullName'] as String?) ?? '',
+      gender: json['gender'] as String?,
+      dateOfBirth: json['dateOfBirth'] as String?,
+      age: (json['age'] as num?)?.toInt(),
+      avatarUrl: json['avatarUrl'] as String?,
+      occupationCategory: json['occupationCategory'] as String?,
+      occupationTitle: json['occupationTitle'] as String?,
+      bio: json['bio'] as String?,
+      smokingHabit: json['smokingHabit'] as String?,
+      dietaryPreference: json['dietaryPreference'] as String?,
+      sleepSchedule: json['sleepSchedule'] as String?,
+      cleanlinessLevel: json['cleanlinessLevel'] as String?,
+      guestTolerance: json['guestTolerance'] as String?,
+      lastKnownLocality: json['lastKnownLocality'] as String?,
+      primaryAuthProvider: json['primaryAuthProvider'] as String?,
+      isActive: isActive,
+      accountStatus: AdminAccountStatus.fromJson(
+        json['accountStatus'] as String?,
+        isActive: isActive,
+      ),
+      disabledAt: json['disabledAt'] != null
+          ? DateTime.tryParse(json['disabledAt'] as String)
+          : null,
+      isSuspended: json['isSuspended'] as bool? ?? false,
+      suspendedReason: json['suspendedReason'] as String?,
+      onboardingCompleted: json['onboardingCompleted'] as bool? ?? false,
+      isLookingForRoom: json['isLookingForRoom'] as bool?,
+      notificationPreferences: prefs is Map<String, dynamic>
+          ? AdminNotificationPreferences.fromJson(prefs)
+          : const AdminNotificationPreferences(),
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'] as String)
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'] as String)
+          : null,
+    );
+  }
 }
 
 class AdminUserPage {
@@ -139,6 +242,15 @@ class AdminUserPage {
   final int totalElements;
   final int totalPages;
   final bool isLast;
+
+  AdminUserPage copyWith({List<AdminUserSummary>? content}) => AdminUserPage(
+        content: content ?? this.content,
+        page: page,
+        size: size,
+        totalElements: totalElements,
+        totalPages: totalPages,
+        isLast: isLast,
+      );
 
   factory AdminUserPage.fromJson(Map<String, dynamic> json) => AdminUserPage(
         content: (json['content'] as List<dynamic>? ?? [])

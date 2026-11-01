@@ -283,7 +283,9 @@ class _RoomsScreenState extends ConsumerState<RoomsScreen> {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      '${room.localityName ?? ""}, ${room.city ?? ""}',
+                                      room.placeLabel.isNotEmpty
+                                          ? room.placeLabel
+                                          : 'Location pending',
                                     ),
                                     const SizedBox(width: 12),
                                     if (room.roomType != null)
@@ -295,6 +297,21 @@ class _RoomsScreenState extends ConsumerState<RoomsScreen> {
                                         visualDensity: VisualDensity.compact,
                                         padding: EdgeInsets.zero,
                                       ),
+                                    const SizedBox(width: 6),
+                                    Chip(
+                                      avatar: Icon(
+                                        room.genderPreference.isOpenToAll
+                                            ? Icons.groups_outlined
+                                            : Icons.person_outline,
+                                        size: 12,
+                                      ),
+                                      label: Text(
+                                        room.genderPreference.label,
+                                        style: const TextStyle(fontSize: 10),
+                                      ),
+                                      visualDensity: VisualDensity.compact,
+                                      padding: EdgeInsets.zero,
+                                    ),
                                     const SizedBox(width: 6),
                                     Text(
                                       'Host: ${room.hostUserName ?? "ID ${room.hostUserId}"}',
@@ -431,9 +448,11 @@ class _RoomDetailDialog extends StatelessWidget {
               _infoTile('Security Deposit', '₹${detail.depositAmount ?? 0}'),
               _infoTile('Locality', detail.localityName ?? 'N/A'),
               _infoTile('City', detail.city ?? 'N/A'),
+              _infoTile('State', detail.stateName ?? 'N/A'),
+              _infoTile('PIN Code', detail.postalCode ?? 'N/A'),
               _infoTile('Coordinates', '${detail.latitude ?? "N/A"}, ${detail.longitude ?? "N/A"}'),
               _infoTile('Move-in Date', detail.moveInDate ?? 'Immediate'),
-              _infoTile('Open to All Genders', detail.openToAllGenders ? 'Yes' : 'No'),
+              _infoTile('Gender Preference', detail.genderPreference.label),
               _infoTile('Available', detail.isAvailable ? 'Yes' : 'No'),
               if (detail.amenities.isNotEmpty)
                 _infoTile('Amenities', detail.amenities.join(', ')),
@@ -490,16 +509,20 @@ class _RoomFormDialogState extends ConsumerState<_RoomFormDialog> {
   // Users
   List<AdminUserSummary> _users = [];
   bool _loadingUsers = true;
-  int? _selectedHostUserId;
+  String? _selectedHostUserId;
 
   // Form Fields
   final _titleController = TextEditingController();
   final _rentController = TextEditingController(text: '12000');
   final _depositController = TextEditingController(text: '24000');
+  // Location fields start empty: they are filled from the chosen place, never
+  // from a hardcoded city.
   final _localityController = TextEditingController();
-  final _cityController = TextEditingController(text: 'Kolkata');
-  final _latController = TextEditingController(text: '22.5726');
-  final _lngController = TextEditingController(text: '88.3639');
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController();
+  final _postalCodeController = TextEditingController();
+  final _latController = TextEditingController();
+  final _lngController = TextEditingController();
   final _descController = TextEditingController();
 
   // Places Autocomplete
@@ -510,7 +533,11 @@ class _RoomFormDialogState extends ConsumerState<_RoomFormDialog> {
   String _listingType = 'HAVE_ROOM';
   String _roomType = 'PRIVATE_ROOM';
   String _furnishing = 'FULLY_FURNISHED';
+  AdminGenderPreference _genderPreference = AdminGenderPreference.all;
   bool _saving = false;
+
+  double? get _latitude => double.tryParse(_latController.text.trim());
+  double? get _longitude => double.tryParse(_lngController.text.trim());
 
   @override
   void initState() {
@@ -542,6 +569,8 @@ class _RoomFormDialogState extends ConsumerState<_RoomFormDialog> {
     _depositController.dispose();
     _localityController.dispose();
     _cityController.dispose();
+    _stateController.dispose();
+    _postalCodeController.dispose();
     _latController.dispose();
     _lngController.dispose();
     _descController.dispose();
@@ -580,6 +609,12 @@ class _RoomFormDialogState extends ConsumerState<_RoomFormDialog> {
         if (details.city != null && details.city!.isNotEmpty) {
           _cityController.text = details.city!;
         }
+        if (details.stateName != null && details.stateName!.isNotEmpty) {
+          _stateController.text = details.stateName!;
+        }
+        if (details.postalCode != null && details.postalCode!.isNotEmpty) {
+          _postalCodeController.text = details.postalCode!;
+        }
       });
     }
   }
@@ -589,6 +624,15 @@ class _RoomFormDialogState extends ConsumerState<_RoomFormDialog> {
     if (_selectedHostUserId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a host user')),
+      );
+      return;
+    }
+
+    final latitude = _latitude;
+    final longitude = _longitude;
+    if (latitude == null || longitude == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pick a place so the listing has coordinates')),
       );
       return;
     }
@@ -603,11 +647,14 @@ class _RoomFormDialogState extends ConsumerState<_RoomFormDialog> {
             depositAmount: int.tryParse(_depositController.text.trim()) ?? 0,
             roomType: _roomType,
             furnishingStatus: _furnishing,
-            latitude: double.tryParse(_latController.text.trim()) ?? 22.5726,
-            longitude: double.tryParse(_lngController.text.trim()) ?? 88.3639,
+            latitude: latitude,
+            longitude: longitude,
             localityName: _localityController.text.trim(),
             city: _cityController.text.trim(),
+            stateName: _stateController.text.trim(),
+            postalCode: _postalCodeController.text.trim(),
             description: _descController.text.trim(),
+            genderPreference: _genderPreference,
           ),
         );
     if (!mounted) return;
@@ -623,8 +670,11 @@ class _RoomFormDialogState extends ConsumerState<_RoomFormDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final currentLat = double.tryParse(_latController.text.trim()) ?? 22.5726;
-    final currentLng = double.tryParse(_lngController.text.trim()) ?? 88.3639;
+    final currentLat = _latitude;
+    final currentLng = _longitude;
+    final coordinatesLabel = currentLat != null && currentLng != null
+        ? 'Selected Coordinates: ${currentLat.toStringAsFixed(4)}, ${currentLng.toStringAsFixed(4)}'
+        : 'Search a place above to set coordinates';
 
     return AlertDialog(
       title: const Row(
@@ -650,7 +700,7 @@ class _RoomFormDialogState extends ConsumerState<_RoomFormDialog> {
                     child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
                   )
                 else
-                  DropdownButtonFormField<int>(
+                  DropdownButtonFormField<String>(
                     initialValue: _selectedHostUserId,
                     decoration: const InputDecoration(
                       labelText: 'Assign to User (Host) *',
@@ -658,7 +708,7 @@ class _RoomFormDialogState extends ConsumerState<_RoomFormDialog> {
                       border: OutlineInputBorder(),
                     ),
                     items: _users.map((u) {
-                      return DropdownMenuItem<int>(
+                      return DropdownMenuItem<String>(
                         value: u.id,
                         child: Text(
                           '${u.fullName} (ID: ${u.id}) • ${u.lastKnownLocality ?? u.gender ?? 'Active'}',
@@ -756,21 +806,48 @@ class _RoomFormDialogState extends ConsumerState<_RoomFormDialog> {
                 ),
                 const SizedBox(height: 14),
 
-                // 5. Furnishing Status
-                DropdownButtonFormField<String>(
-                  initialValue: _furnishing,
-                  decoration: const InputDecoration(
-                    labelText: 'Furnishing Status',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'FULLY_FURNISHED', child: Text('Fully Furnished')),
-                    DropdownMenuItem(value: 'SEMI_FURNISHED', child: Text('Semi Furnished')),
-                    DropdownMenuItem(value: 'UNFURNISHED', child: Text('Unfurnished')),
+                // 5. Furnishing Status & Gender Preference
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _furnishing,
+                        decoration: const InputDecoration(
+                          labelText: 'Furnishing Status',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'FULLY_FURNISHED', child: Text('Fully Furnished')),
+                          DropdownMenuItem(value: 'SEMI_FURNISHED', child: Text('Semi Furnished')),
+                          DropdownMenuItem(value: 'UNFURNISHED', child: Text('Unfurnished')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setState(() => _furnishing = val);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<AdminGenderPreference>(
+                        initialValue: _genderPreference,
+                        decoration: const InputDecoration(
+                          labelText: 'Gender Preference',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: AdminGenderPreference.values
+                            .map(
+                              (g) => DropdownMenuItem(
+                                value: g,
+                                child: Text(g.label),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) setState(() => _genderPreference = val);
+                        },
+                      ),
+                    ),
                   ],
-                  onChanged: (val) {
-                    if (val != null) setState(() => _furnishing = val);
-                  },
                 ),
                 const SizedBox(height: 16),
 
@@ -930,7 +1007,7 @@ class _RoomFormDialogState extends ConsumerState<_RoomFormDialog> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            'Selected Coordinates: ${currentLat.toStringAsFixed(4)}, ${currentLng.toStringAsFixed(4)}',
+                            coordinatesLabel,
                             style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
                             textAlign: TextAlign.center,
                           ),
@@ -961,10 +1038,36 @@ class _RoomFormDialogState extends ConsumerState<_RoomFormDialog> {
                         controller: _cityController,
                         decoration: const InputDecoration(
                           labelText: 'City *',
+                          hintText: 'Filled from the selected place',
                           border: OutlineInputBorder(),
                         ),
                         validator: (v) =>
                             (v == null || v.trim().isEmpty) ? 'Required' : null,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _stateController,
+                        decoration: const InputDecoration(
+                          labelText: 'State',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _postalCodeController,
+                        decoration: const InputDecoration(
+                          labelText: 'PIN Code',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
                       ),
                     ),
                   ],

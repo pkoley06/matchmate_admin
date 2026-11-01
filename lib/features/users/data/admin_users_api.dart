@@ -36,7 +36,7 @@ class AdminUsersApi {
   }
 
   /// GET /api/v1/admin/users/{id}
-  Future<AdminUserDetail> getUser(int id) async {
+  Future<AdminUserDetail> getUser(String id) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '/api/v1/admin/users/$id',
@@ -62,7 +62,7 @@ class AdminUsersApi {
 
   /// PUT /api/v1/admin/users/{id}
   Future<AdminUserDetail> updateUser(
-    int id,
+    String id,
     AdminUserUpdateRequest request,
   ) async {
     try {
@@ -77,7 +77,7 @@ class AdminUsersApi {
   }
 
   /// PATCH /api/v1/admin/users/{id}/active
-  Future<AdminUserDetail> setActive(int id, bool active) async {
+  Future<AdminUserDetail> setActive(String id, bool active) async {
     try {
       final response = await _dio.patch<Map<String, dynamic>>(
         '/api/v1/admin/users/$id/active',
@@ -90,7 +90,7 @@ class AdminUsersApi {
   }
 
   /// PATCH /api/v1/admin/users/{id}/suspend
-  Future<AdminUserDetail> setSuspended(int id, bool suspended, {String? reason}) async {
+  Future<AdminUserDetail> setSuspended(String id, bool suspended, {String? reason}) async {
     try {
       final payload = <String, dynamic>{'suspended': suspended};
       if (reason != null) {

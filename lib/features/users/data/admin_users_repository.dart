@@ -18,19 +18,19 @@ class AdminUsersRepository {
     int size = 20,
   }) => _api.getUsers(search: search, page: page, size: size);
 
-  Future<AdminUserDetail> getUser(int id) => _api.getUser(id);
+  Future<AdminUserDetail> getUser(String id) => _api.getUser(id);
 
   Future<AdminUserDetail> createUser(AdminUserCreateRequest request) =>
       _api.createUser(request);
 
   Future<AdminUserDetail> updateUser(
-    int id,
+    String id,
     AdminUserUpdateRequest request,
   ) => _api.updateUser(id, request);
 
-  Future<AdminUserDetail> setActive(int id, bool active) =>
+  Future<AdminUserDetail> setActive(String id, bool active) =>
       _api.setActive(id, active);
 
-  Future<AdminUserDetail> setSuspended(int id, bool suspended, {String? reason}) =>
+  Future<AdminUserDetail> setSuspended(String id, bool suspended, {String? reason}) =>
       _api.setSuspended(id, suspended, reason: reason);
 }
