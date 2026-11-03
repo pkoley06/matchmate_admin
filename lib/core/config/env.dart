@@ -5,6 +5,6 @@ abstract final class Env {
   /// Base URL of the Spring Boot API.
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://130.210.45.27',
+    defaultValue: 'https://api.mateeazy.in',
   );
 }
