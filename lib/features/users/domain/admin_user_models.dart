@@ -49,6 +49,7 @@ class AdminUserSummary {
   const AdminUserSummary({
     required this.id,
     required this.fullName,
+    this.avatarUrl,
     this.gender,
     this.age,
     this.lastKnownLocality,
@@ -63,6 +64,7 @@ class AdminUserSummary {
 
   final String id;
   final String fullName;
+  final String? avatarUrl;
   final String? gender;
   final int? age;
   final String? lastKnownLocality;
@@ -84,6 +86,7 @@ class AdminUserSummary {
       AdminUserSummary(
         id: id,
         fullName: fullName,
+        avatarUrl: avatarUrl,
         gender: gender,
         age: age,
         lastKnownLocality: lastKnownLocality,
@@ -103,6 +106,7 @@ class AdminUserSummary {
     return AdminUserSummary(
       id: json['id'] as String,
       fullName: (json['fullName'] as String?) ?? '',
+      avatarUrl: json['avatarUrl'] as String?,
       gender: json['gender'] as String?,
       age: (json['age'] as num?)?.toInt(),
       lastKnownLocality: json['lastKnownLocality'] as String?,

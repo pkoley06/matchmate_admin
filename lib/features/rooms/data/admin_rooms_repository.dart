@@ -15,9 +15,16 @@ class AdminRoomsRepository {
   Future<AdminRoomPage> listRooms({
     String? search,
     bool? available,
+    String? hostUserId,
     int page = 0,
     int size = 20,
-  }) => _api.getRooms(search: search, available: available, page: page, size: size);
+  }) => _api.getRooms(
+    search: search,
+    available: available,
+    hostUserId: hostUserId,
+    page: page,
+    size: size,
+  );
 
   Future<AdminRoomDetail> getRoom(String id) => _api.getRoom(id);
 

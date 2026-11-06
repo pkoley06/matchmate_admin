@@ -14,6 +14,8 @@ class AdminBrandingConfig {
     this.developerUpiId,
     this.developerQrCodeUrl,
     this.developerSupportNote,
+    this.developerUpiAmount,
+    this.developerUpiNote,
     this.updatedAt,
   });
 
@@ -33,6 +35,13 @@ class AdminBrandingConfig {
   final String? developerUpiId;
   final String? developerQrCodeUrl;
   final String? developerSupportNote;
+
+  /// Rupees pre-filled in the payer's UPI app; null leaves the amount blank
+  /// for the payer to type.
+  final int? developerUpiAmount;
+
+  /// The note / remark pre-filled in the payer's UPI app.
+  final String? developerUpiNote;
   final DateTime? updatedAt;
 
   factory AdminBrandingConfig.fromJson(Map<String, dynamic> json) =>
@@ -51,6 +60,8 @@ class AdminBrandingConfig {
         developerUpiId: json['developerUpiId'] as String?,
         developerQrCodeUrl: json['developerQrCodeUrl'] as String?,
         developerSupportNote: json['developerSupportNote'] as String?,
+        developerUpiAmount: (json['developerUpiAmount'] as num?)?.toInt(),
+        developerUpiNote: json['developerUpiNote'] as String?,
         updatedAt: json['updatedAt'] != null
             ? DateTime.tryParse(json['updatedAt'] as String)
             : null,
@@ -72,6 +83,8 @@ class AdminBrandingUpdateRequest {
     this.developerUpiId,
     this.developerQrCodeUrl,
     this.developerSupportNote,
+    this.developerUpiAmount,
+    this.developerUpiNote,
   });
 
   final String appName;
@@ -87,6 +100,10 @@ class AdminBrandingUpdateRequest {
   final String? developerUpiId;
   final String? developerQrCodeUrl;
   final String? developerSupportNote;
+
+  /// 0 clears the amount (the payer types their own).
+  final int? developerUpiAmount;
+  final String? developerUpiNote;
 
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{
@@ -104,6 +121,8 @@ class AdminBrandingUpdateRequest {
     if (developerUpiId != null) map['developerUpiId'] = developerUpiId;
     if (developerQrCodeUrl != null) map['developerQrCodeUrl'] = developerQrCodeUrl;
     if (developerSupportNote != null) map['developerSupportNote'] = developerSupportNote;
+    if (developerUpiAmount != null) map['developerUpiAmount'] = developerUpiAmount;
+    if (developerUpiNote != null) map['developerUpiNote'] = developerUpiNote;
     return map;
   }
 }

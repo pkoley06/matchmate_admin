@@ -7,7 +7,7 @@
       "type": "dart",
       "deviceId": "chrome",
       "args": [
-        "--dart-define=API_BASE_URL=http://130.210.45.27"
+        "--dart-define=API_BASE_URL=https://api.mateeazy.in"
       ]
     },
     {

@@ -22,6 +22,7 @@ class AdminRoomSummary {
     required this.title,
     required this.hostUserId,
     this.hostUserName,
+    this.hostAvatarUrl,
     this.listingType,
     this.roomType,
     this.furnishingStatus,
@@ -41,6 +42,7 @@ class AdminRoomSummary {
   final String title;
   final String hostUserId;
   final String? hostUserName;
+  final String? hostAvatarUrl;
   final String? listingType;
   final String? roomType;
   final String? furnishingStatus;
@@ -66,6 +68,7 @@ class AdminRoomSummary {
         title: title,
         hostUserId: hostUserId,
         hostUserName: hostUserName,
+        hostAvatarUrl: hostAvatarUrl,
         listingType: listingType,
         roomType: roomType,
         furnishingStatus: furnishingStatus,
@@ -87,6 +90,7 @@ class AdminRoomSummary {
         title: (json['title'] as String?) ?? '',
         hostUserId: (json['hostUserId'] as String?) ?? '',
         hostUserName: json['hostUserName'] as String?,
+        hostAvatarUrl: json['hostAvatarUrl'] as String?,
         listingType: json['listingType'] as String?,
         roomType: json['roomType'] as String?,
         furnishingStatus: json['furnishingStatus'] as String?,
@@ -133,6 +137,8 @@ class AdminRoomDetail {
     this.amenities = const [],
     this.genderPreference = AdminGenderPreference.all,
     required this.isAvailable,
+    this.likesCount = 0,
+    this.commentsCount = 0,
     this.createdAt,
     this.updatedAt,
   });
@@ -159,8 +165,16 @@ class AdminRoomDetail {
   final List<String> amenities;
   final AdminGenderPreference genderPreference;
   final bool isAvailable;
+  final int likesCount;
+  final int commentsCount;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+
+  /// "Koramangala, Bengaluru" — only the parts that are set.
+  String get placeLabel => [
+        if (localityName?.isNotEmpty == true) localityName!,
+        if (city?.isNotEmpty == true) city!,
+      ].join(', ');
 
   bool get openToAllGenders => genderPreference.isOpenToAll;
 
@@ -198,6 +212,8 @@ class AdminRoomDetail {
                 ? AdminGenderPreference.all
                 : AdminGenderPreference.other,
         isAvailable: json['isAvailable'] as bool? ?? true,
+        likesCount: (json['likesCount'] as num?)?.toInt() ?? 0,
+        commentsCount: (json['commentsCount'] as num?)?.toInt() ?? 0,
         createdAt: json['createdAt'] != null
             ? DateTime.tryParse(json['createdAt'] as String)
             : null,

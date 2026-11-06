@@ -18,6 +18,7 @@ class AdminRoomsApi {
   Future<AdminRoomPage> getRooms({
     String? search,
     bool? available,
+    String? hostUserId,
     int page = 0,
     int size = 20,
   }) async {
@@ -31,6 +32,9 @@ class AdminRoomsApi {
       }
       if (available != null) {
         queryParams['available'] = available;
+      }
+      if (hostUserId != null) {
+        queryParams['hostUserId'] = hostUserId;
       }
 
       final response = await _dio.get<Map<String, dynamic>>(

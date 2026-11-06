@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/uploads/admin_upload_api.dart';
+import '../../../core/widgets/admin_image.dart';
 import '../domain/admin_branding_models.dart';
 import 'branding_controller.dart';
 
@@ -25,8 +28,13 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
   final _developerUpiController = TextEditingController();
   final _developerQrCodeController = TextEditingController();
   final _developerNoteController = TextEditingController();
+  final _developerUpiAmountController = TextEditingController();
+  final _developerUpiNoteController = TextEditingController();
   bool _maintenance = false;
   bool _initialized = false;
+
+  /// The branding image being uploaded right now, if any.
+  BrandingImageKind? _uploading;
 
   @override
   void dispose() {
@@ -42,6 +50,8 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
     _developerUpiController.dispose();
     _developerQrCodeController.dispose();
     _developerNoteController.dispose();
+    _developerUpiAmountController.dispose();
+    _developerUpiNoteController.dispose();
     super.dispose();
   }
 
@@ -59,8 +69,40 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
     _developerUpiController.text = config.developerUpiId ?? '';
     _developerQrCodeController.text = config.developerQrCodeUrl ?? '';
     _developerNoteController.text = config.developerSupportNote ?? '';
+    _developerUpiAmountController.text =
+        config.developerUpiAmount?.toString() ?? '';
+    _developerUpiNoteController.text = config.developerUpiNote ?? '';
     _maintenance = config.maintenanceMode;
     _initialized = true;
+  }
+
+  /// Picks an image, stores it in the app's bucket and puts its URL in
+  /// [target]. The URL only takes effect once the form is saved.
+  Future<void> _uploadImage(
+    BrandingImageKind kind,
+    TextEditingController target,
+  ) async {
+    if (_uploading != null) return;
+    final picked = await ref.read(imagePickerProvider).pick();
+    if (picked.isEmpty || !mounted) return;
+    setState(() => _uploading = kind);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final url = await ref
+          .read(adminUploadApiProvider)
+          .uploadBrandingImage(picked.first, kind);
+      if (!mounted) return;
+      setState(() => target.text = url);
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Image uploaded — press Save Changes to apply it'),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+    } finally {
+      if (mounted) setState(() => _uploading = null);
+    }
   }
 
   Future<void> _submit() async {
@@ -83,6 +125,11 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
             developerUpiId: _developerUpiController.text.trim(),
             developerQrCodeUrl: _developerQrCodeController.text.trim(),
             developerSupportNote: _developerNoteController.text.trim(),
+            // 0 tells the server to clear the amount, so the payer types
+            // their own.
+            developerUpiAmount:
+                int.tryParse(_developerUpiAmountController.text.trim()) ?? 0,
+            developerUpiNote: _developerUpiNoteController.text.trim(),
           ),
         );
 
@@ -224,20 +271,33 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
                       title: 'Brand Assets',
                       icon: Icons.image_outlined,
                       children: [
-                        TextFormField(
+                        _BrandingImageField(
+                          label: 'App Logo',
+                          helperText:
+                              'Upload an image, or paste the URL of one '
+                              'hosted elsewhere.',
                           controller: _logoController,
-                          decoration: const InputDecoration(
-                            labelText: 'App Logo Image URL',
-                            border: OutlineInputBorder(),
+                          uploading: _uploading == BrandingImageKind.logo,
+                          enabled: _uploading == null,
+                          onUpload: () => _uploadImage(
+                            BrandingImageKind.logo,
+                            _logoController,
                           ),
+                          onChanged: () => setState(() {}),
                         ),
-                        const SizedBox(height: 16),
-                        TextFormField(
+                        const SizedBox(height: 20),
+                        _BrandingImageField(
+                          label: 'Splash / Login Screen Banner',
+                          helperText:
+                              'Shown on the splash and welcome screens.',
                           controller: _splashController,
-                          decoration: const InputDecoration(
-                            labelText: 'Splash / Login Screen Banner URL',
-                            border: OutlineInputBorder(),
+                          uploading: _uploading == BrandingImageKind.splash,
+                          enabled: _uploading == null,
+                          onUpload: () => _uploadImage(
+                            BrandingImageKind.splash,
+                            _splashController,
                           ),
+                          onChanged: () => setState(() {}),
                         ),
                       ],
                     ),
@@ -324,25 +384,80 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        TextFormField(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _developerUpiAmountController,
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(6),
+                                ],
+                                decoration: const InputDecoration(
+                                  labelText: 'UPI Amount (₹)',
+                                  hintText: 'Blank — the payer chooses',
+                                  prefixText: '₹ ',
+                                  border: OutlineInputBorder(),
+                                  helperText:
+                                      "Pre-filled in the payer's UPI app. "
+                                      'Leave blank so they enter any amount.',
+                                  helperMaxLines: 2,
+                                ),
+                                validator: (v) {
+                                  final text = v?.trim() ?? '';
+                                  if (text.isEmpty) return null;
+                                  final amount = int.tryParse(text);
+                                  return (amount == null || amount > 100000)
+                                      ? 'Up to ₹1,00,000'
+                                      : null;
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 2,
+                              child: TextFormField(
+                                controller: _developerUpiNoteController,
+                                maxLength: 80,
+                                decoration: const InputDecoration(
+                                  labelText: 'UPI Payment Note',
+                                  hintText: 'e.g. Coffee for the developer',
+                                  border: OutlineInputBorder(),
+                                  helperText:
+                                      "The remark shown in the payer's UPI "
+                                      'app and on their payment record.',
+                                  helperMaxLines: 2,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _BrandingImageField(
+                          label: 'Payment QR Code',
+                          helperText:
+                              'Your UPI QR (GPay / PhonePe / Paytm). Kept '
+                              'pixel-exact so it stays scannable.',
                           controller: _developerQrCodeController,
-                          decoration: const InputDecoration(
-                            labelText: 'Developer Payment QR Code Image URL',
-                            hintText: 'https://...',
-                            prefixIcon: Icon(Icons.qr_code_2_outlined),
-                            border: OutlineInputBorder(),
-                            helperText:
-                                'Public image URL of your payment QR code (e.g. GPay/PhonePe/Paytm QR).',
+                          uploading: _uploading == BrandingImageKind.qr,
+                          enabled: _uploading == null,
+                          previewFit: BoxFit.contain,
+                          onUpload: () => _uploadImage(
+                            BrandingImageKind.qr,
+                            _developerQrCodeController,
                           ),
+                          onChanged: () => setState(() {}),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _developerNoteController,
                           decoration: const InputDecoration(
-                            labelText: 'Sweet Support Note for Users',
+                            labelText: 'Support Message shown in the App',
                             border: OutlineInputBorder(),
                             helperText:
-                                'Heartwarming message thanking users for supporting independent development.',
+                                'The message on the "Buy me a coffee" card and payment sheet.',
                           ),
                           maxLines: 2,
                         ),
@@ -380,6 +495,114 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
       }
     } catch (_) {}
     return const Color(0xFF6750A4);
+  }
+}
+
+/// One branding image: a preview, an upload button and the URL itself (still
+/// editable, for an image hosted somewhere else).
+class _BrandingImageField extends StatelessWidget {
+  const _BrandingImageField({
+    required this.label,
+    required this.helperText,
+    required this.controller,
+    required this.uploading,
+    required this.enabled,
+    required this.onUpload,
+    required this.onChanged,
+    this.previewFit = BoxFit.cover,
+  });
+
+  final String label;
+  final String helperText;
+  final TextEditingController controller;
+  final bool uploading;
+  final bool enabled;
+  final VoidCallback onUpload;
+
+  /// The URL changed (typed, uploaded or cleared) — refresh the preview.
+  final VoidCallback onChanged;
+  final BoxFit previewFit;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final url = controller.text.trim();
+    final hasImage = isImageUrl(url);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: hasImage ? () => showImageViewer(context, [url]) : null,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: theme.colorScheme.outlineVariant),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: AdminNetworkImage(
+              key: ValueKey(url),
+              url: hasImage ? url : null,
+              fit: previewFit,
+              fallbackIcon: Icons.image_outlined,
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: controller,
+                onChanged: (_) => onChanged(),
+                decoration: InputDecoration(
+                  labelText: '$label — image URL',
+                  hintText: 'https://...',
+                  border: const OutlineInputBorder(),
+                  helperText: helperText,
+                  helperMaxLines: 2,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton.tonalIcon(
+                    onPressed: enabled ? onUpload : null,
+                    icon: uploading
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.upload_outlined),
+                    label: Text(
+                      uploading
+                          ? 'Uploading…'
+                          : (hasImage ? 'Replace image' : 'Upload image'),
+                    ),
+                  ),
+                  if (url.isNotEmpty)
+                    TextButton.icon(
+                      onPressed: enabled
+                          ? () {
+                              controller.clear();
+                              onChanged();
+                            }
+                          : null,
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Remove'),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

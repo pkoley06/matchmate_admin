@@ -10,7 +10,9 @@ import '../features/branding/presentation/branding_screen.dart';
 import '../features/comments/presentation/comments_screen.dart';
 import '../features/questionnaire/presentation/questionnaire_screen.dart';
 import '../features/reports/presentation/reports_screen.dart';
+import '../features/rooms/presentation/room_detail_screen.dart';
 import '../features/rooms/presentation/rooms_screen.dart';
+import '../features/users/presentation/user_detail_screen.dart';
 import '../features/users/presentation/users_screen.dart';
 import 'admin_shell.dart';
 
@@ -24,6 +26,12 @@ abstract final class Routes {
   static const comments = '/comments';
   static const branding = '/branding';
   static const questionnaire = '/questionnaire';
+
+  /// One listing's page: photos, details, comments, edit.
+  static String room(String id) => '$rooms/$id';
+
+  /// One user's page: photo, details, moderation, their listings.
+  static String user(String id) => '$users/$id';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -61,12 +69,38 @@ final routerProvider = Provider<GoRouter>((ref) {
         branches: [
           StatefulShellBranch(
             routes: [
-              GoRoute(path: Routes.users, builder: (_, _) => const UsersScreen()),
+              GoRoute(
+                path: Routes.users,
+                builder: (_, _) => const UsersScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    // Keyed by id: going from one user straight to another
+                    // must rebuild the page, not reuse its state.
+                    builder: (_, state) {
+                      final id = state.pathParameters['id']!;
+                      return UserDetailScreen(key: ValueKey(id), userId: id);
+                    },
+                  ),
+                ],
+              ),
             ],
           ),
           StatefulShellBranch(
             routes: [
-              GoRoute(path: Routes.rooms, builder: (_, _) => const RoomsScreen()),
+              GoRoute(
+                path: Routes.rooms,
+                builder: (_, _) => const RoomsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (_, state) {
+                      final id = state.pathParameters['id']!;
+                      return RoomDetailScreen(key: ValueKey(id), roomId: id);
+                    },
+                  ),
+                ],
+              ),
             ],
           ),
           StatefulShellBranch(

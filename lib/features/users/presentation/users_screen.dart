@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/router.dart';
+import '../../../core/widgets/admin_image.dart';
 import '../domain/admin_user_models.dart';
+import 'user_form_dialog.dart';
 import 'users_controller.dart';
 
 class UsersScreen extends ConsumerStatefulWidget {
@@ -24,24 +28,18 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     ref.read(usersControllerProvider.notifier).loadUsers(search: val.trim(), page: 0);
   }
 
-  void _showCreateDialog() {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => const _UserFormDialog(),
+  /// Creates a user, then opens their page.
+  Future<void> _showCreateDialog() async {
+    final created = await UserFormDialog.show(context);
+    if (created == null || !mounted) return;
+    ref.read(usersControllerProvider.notifier).loadUsers(page: 0);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('User created successfully')),
     );
+    context.go(Routes.user(created.id));
   }
 
-  void _showDetailDialog(AdminUserSummary summary) async {
-    final detail = await ref
-        .read(usersControllerProvider.notifier)
-        .fetchDetail(summary.id);
-    if (!mounted || detail == null) return;
-
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => _UserDetailDialog(detail: detail),
-    );
-  }
+  void _openUser(AdminUserSummary user) => context.go(Routes.user(user.id));
 
   void _confirmSuspend(AdminUserSummary user) {
     final reasonController = TextEditingController();
@@ -264,19 +262,10 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                             itemBuilder: (context, index) {
                               final user = state.pageData!.content[index];
                               return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor:
-                                      theme.colorScheme.primaryContainer,
-                                  foregroundColor:
-                                      theme.colorScheme.onPrimaryContainer,
-                                  child: Text(
-                                    user.fullName.isNotEmpty
-                                        ? user.fullName[0].toUpperCase()
-                                        : '?',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                onTap: () => _openUser(user),
+                                leading: AdminAvatar(
+                                  url: user.avatarUrl,
+                                  name: user.fullName,
                                 ),
                                 title: Row(
                                   children: [
@@ -368,9 +357,10 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                     ),
                                     const SizedBox(width: 8),
                                     IconButton(
-                                      icon: const Icon(Icons.info_outline),
-                                      tooltip: 'Inspect details',
-                                      onPressed: () => _showDetailDialog(user),
+                                      icon: const Icon(Icons.open_in_new),
+                                      tooltip:
+                                          'Open user — photo, details, edit',
+                                      onPressed: () => _openUser(user),
                                     ),
                                   ],
                                 ),
@@ -416,178 +406,6 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
   }
 }
 
-class _UserDetailDialog extends StatelessWidget {
-  const _UserDetailDialog({required this.detail});
-
-  final AdminUserDetail detail;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return AlertDialog(
-      title: Row(
-        children: [
-          CircleAvatar(
-            child: Text(detail.fullName.isNotEmpty ? detail.fullName[0] : '?'),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(detail.fullName),
-                Text(
-                  'User ID: ${detail.id} • Auth: ${detail.primaryAuthProvider ?? "N/A"}',
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      content: SizedBox(
-        width: 500,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (detail.isSuspended)
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.block, color: Colors.red, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'ACCOUNT SUSPENDED: ${detail.suspendedReason ?? "No reason specified"}',
-                          style: TextStyle(
-                            color: Colors.red.shade900,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              _infoTile('Gender', detail.gender ?? 'Not specified'),
-              _infoTile('Date of Birth', detail.dateOfBirth ?? 'Not specified'),
-              _infoTile('Locality', detail.lastKnownLocality ?? 'Not specified'),
-              _infoTile('Occupation', '${detail.occupationTitle ?? ""} (${detail.occupationCategory ?? "N/A"})'),
-              _infoTile('Bio', detail.bio ?? 'No bio provided'),
-              const Divider(height: 24),
-              Text(
-                'Lifestyle Questionnaire Answers',
-                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              _infoTile('Smoking Habit', detail.smokingHabit ?? 'Unanswered'),
-              _infoTile('Dietary Preference', detail.dietaryPreference ?? 'Unanswered'),
-              _infoTile('Sleep Schedule', detail.sleepSchedule ?? 'Unanswered'),
-              _infoTile('Cleanliness Level', detail.cleanlinessLevel ?? 'Unanswered'),
-              _infoTile('Guest Tolerance', detail.guestTolerance ?? 'Unanswered'),
-              const Divider(height: 24),
-              _infoTile('Onboarding Completed', detail.onboardingCompleted ? 'Yes' : 'No'),
-              _infoTile(
-                'Room Finder Mode',
-                switch (detail.isLookingForRoom) {
-                  true => 'On (looking for a room)',
-                  false => 'Off',
-                  null => 'Unknown',
-                },
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    const SizedBox(
-                      width: 160,
-                      child: Text(
-                        'Account Status',
-                        style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey),
-                      ),
-                    ),
-                    _AccountStatusChip(status: detail.accountStatus),
-                    if (detail.disabledAt != null) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        'since ${_formatDate(detail.disabledAt!)}',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const Divider(height: 24),
-              Text(
-                'Notification Preferences',
-                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Read-only. The user controls these from Settings in the app.',
-                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
-              ),
-              const SizedBox(height: 4),
-              _NotificationPreferenceRow(
-                icon: Icons.favorite_border,
-                label: 'Likes & Comments',
-                value: detail.notificationPreferences.likesComments,
-              ),
-              _NotificationPreferenceRow(
-                icon: Icons.chat_bubble_outline,
-                label: 'Messages & Chat',
-                value: detail.notificationPreferences.messages,
-              ),
-              _NotificationPreferenceRow(
-                icon: Icons.person_search_outlined,
-                label: 'Room Seekers Nearby',
-                value: detail.notificationPreferences.seekersNearby,
-              ),
-              _NotificationPreferenceRow(
-                icon: Icons.home_work_outlined,
-                label: 'Rooms Listed Nearby',
-                value: detail.notificationPreferences.roomsNearby,
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
-        ),
-      ],
-    );
-  }
-
-  Widget _infoTile(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 160,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.grey),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
-  }
-}
-
 /// ACTIVE / DISABLED / DELETED pill. Pressable only when [onPressed] is set.
 class _AccountStatusChip extends StatelessWidget {
   const _AccountStatusChip({required this.status, this.onPressed});
@@ -609,254 +427,6 @@ class _AccountStatusChip extends StatelessWidget {
         style: TextStyle(color: color.shade800, fontWeight: FontWeight.w600),
       ),
       onPressed: onPressed,
-    );
-  }
-}
-
-class _NotificationPreferenceRow extends StatelessWidget {
-  const _NotificationPreferenceRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: Colors.grey),
-          const SizedBox(width: 10),
-          Expanded(child: Text(label)),
-          Switch.adaptive(value: value, onChanged: null),
-        ],
-      ),
-    );
-  }
-}
-
-String _formatDate(DateTime dt) {
-  final local = dt.toLocal();
-  String two(int n) => n.toString().padLeft(2, '0');
-  return '${local.year}-${two(local.month)}-${two(local.day)} ${two(local.hour)}:${two(local.minute)}';
-}
-
-class _UserFormDialog extends ConsumerStatefulWidget {
-  const _UserFormDialog();
-
-  @override
-  ConsumerState<_UserFormDialog> createState() => _UserFormDialogState();
-}
-
-class _UserFormDialogState extends ConsumerState<_UserFormDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _localityController = TextEditingController();
-  final _dobController = TextEditingController(text: '1998-05-15');
-  final _occupationController = TextEditingController();
-  final _bioController = TextEditingController();
-
-  String _gender = 'MALE';
-  String _smoking = 'NON_SMOKER';
-  String _diet = 'VEGETARIAN';
-  String _sleep = 'FLEXIBLE';
-  String _cleanliness = 'MODERATE';
-  String _guest = 'OCCASIONAL';
-  bool _saving = false;
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _localityController.dispose();
-    _dobController.dispose();
-    _occupationController.dispose();
-    _bioController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-
-    setState(() => _saving = true);
-    final success = await ref.read(usersControllerProvider.notifier).createUser(
-          AdminUserCreateRequest(
-            fullName: _nameController.text.trim(),
-            gender: _gender,
-            dateOfBirth: _dobController.text.trim(),
-            lastKnownLocality: _localityController.text.trim(),
-            occupationTitle: _occupationController.text.trim(),
-            bio: _bioController.text.trim(),
-            smokingHabit: _smoking,
-            dietaryPreference: _diet,
-            sleepSchedule: _sleep,
-            cleanlinessLevel: _cleanliness,
-            guestTolerance: _guest,
-          ),
-        );
-    if (!mounted) return;
-    setState(() => _saving = false);
-    if (success) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User created successfully')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Add User'),
-      content: SizedBox(
-        width: 500,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Full Name *'),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _gender,
-                  decoration: const InputDecoration(labelText: 'Gender'),
-                  items: const [
-                    DropdownMenuItem(value: 'MALE', child: Text('Male')),
-                    DropdownMenuItem(value: 'FEMALE', child: Text('Female')),
-                    DropdownMenuItem(value: 'NON_BINARY', child: Text('Non-Binary')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setState(() => _gender = val);
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _dobController,
-                  decoration: const InputDecoration(
-                    labelText: 'Date of Birth (YYYY-MM-DD) *',
-                  ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _localityController,
-                  decoration: const InputDecoration(labelText: 'Locality / Area'),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _occupationController,
-                  decoration: const InputDecoration(labelText: 'Occupation Title'),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _bioController,
-                  decoration: const InputDecoration(labelText: 'Bio'),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 16),
-                const Divider(),
-                const Text(
-                  'Lifestyle Answers',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _smoking,
-                  decoration: const InputDecoration(labelText: 'Smoking Habit'),
-                  items: const [
-                    DropdownMenuItem(value: 'NON_SMOKER', child: Text('Non-smoker')),
-                    DropdownMenuItem(value: 'OCCASIONAL_SMOKER', child: Text('Occasional / Balcony')),
-                    DropdownMenuItem(value: 'REGULAR_SMOKER', child: Text('Regular smoker')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setState(() => _smoking = val);
-                  },
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _diet,
-                  decoration: const InputDecoration(labelText: 'Dietary Preference'),
-                  items: const [
-                    DropdownMenuItem(value: 'VEGETARIAN', child: Text('Vegetarian')),
-                    DropdownMenuItem(value: 'NON_VEGETARIAN', child: Text('Non-Vegetarian')),
-                    DropdownMenuItem(value: 'VEGAN', child: Text('Vegan')),
-                    DropdownMenuItem(value: 'EGGETARIAN', child: Text('Eggetarian')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setState(() => _diet = val);
-                  },
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _cleanliness,
-                  decoration: const InputDecoration(labelText: 'Cleanliness'),
-                  items: const [
-                    DropdownMenuItem(value: 'VERY_CLEAN', child: Text('Very Clean')),
-                    DropdownMenuItem(value: 'MODERATE', child: Text('Moderate')),
-                    DropdownMenuItem(value: 'RELAXED', child: Text('Relaxed')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setState(() => _cleanliness = val);
-                  },
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _sleep,
-                  decoration: const InputDecoration(labelText: 'Sleep Schedule'),
-                  items: const [
-                    DropdownMenuItem(value: 'EARLY_BIRD', child: Text('Early Bird')),
-                    DropdownMenuItem(value: 'FLEXIBLE', child: Text('Flexible')),
-                    DropdownMenuItem(value: 'NIGHT_OWL', child: Text('Night Owl')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setState(() => _sleep = val);
-                  },
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _guest,
-                  decoration: const InputDecoration(labelText: 'Guest Tolerance'),
-                  items: const [
-                    DropdownMenuItem(value: 'NO_GUESTS', child: Text('No Guests')),
-                    DropdownMenuItem(value: 'OCCASIONAL', child: Text('Occasional Guests')),
-                    DropdownMenuItem(value: 'FREQUENT', child: Text('Frequent Guests')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setState(() => _guest = val);
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _saving ? null : _submit,
-          child: _saving
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Create User'),
-        ),
-      ],
     );
   }
 }
