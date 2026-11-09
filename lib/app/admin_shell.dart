@@ -17,6 +17,7 @@ class AdminShell extends ConsumerWidget {
     (icon: Icons.forum_outlined, label: 'Comments'),
     (icon: Icons.palette_outlined, label: 'Branding'),
     (icon: Icons.quiz_outlined, label: 'Questionnaire'),
+    (icon: Icons.campaign_outlined, label: 'Announcements'),
   ];
 
   @override

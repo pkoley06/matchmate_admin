@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/announcements/presentation/announcements_screen.dart';
 import '../features/auth/presentation/admin_auth_controller.dart';
 import '../features/auth/presentation/admin_login_screen.dart';
 import '../features/auth/presentation/admin_splash_screen.dart';
@@ -26,6 +27,7 @@ abstract final class Routes {
   static const comments = '/comments';
   static const branding = '/branding';
   static const questionnaire = '/questionnaire';
+  static const announcements = '/announcements';
 
   /// One listing's page: photos, details, comments, edit.
   static String room(String id) => '$rooms/$id';
@@ -134,6 +136,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.questionnaire,
                 builder: (_, _) => const QuestionnaireScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.announcements,
+                builder: (_, _) => const AnnouncementsScreen(),
               ),
             ],
           ),

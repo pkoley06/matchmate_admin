@@ -30,6 +30,7 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
   final _developerNoteController = TextEditingController();
   final _developerUpiAmountController = TextEditingController();
   final _developerUpiNoteController = TextEditingController();
+  String _activeIcon = 'default';
   bool _maintenance = false;
   bool _initialized = false;
 
@@ -72,6 +73,7 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
     _developerUpiAmountController.text =
         config.developerUpiAmount?.toString() ?? '';
     _developerUpiNoteController.text = config.developerUpiNote ?? '';
+    _activeIcon = config.activeIcon ?? 'default';
     _maintenance = config.maintenanceMode;
     _initialized = true;
   }
@@ -130,6 +132,7 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
             developerUpiAmount:
                 int.tryParse(_developerUpiAmountController.text.trim()) ?? 0,
             developerUpiNote: _developerUpiNoteController.text.trim(),
+            activeIcon: _activeIcon,
           ),
         );
 
@@ -298,6 +301,56 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
                             _splashController,
                           ),
                           onChanged: () => setState(() {}),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Phone Launcher Icon Card
+                    _CardSection(
+                      title: 'Phone Launcher Icon (Dynamic Theme)',
+                      icon: Icons.app_shortcut_outlined,
+                      children: [
+                        Text(
+                          'Choose which app icon appears in users\' phone drawer and home screen. '
+                          'Changes apply dynamically on users\' phones without needing a Play Store update.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          initialValue: _activeIcon,
+                          decoration: const InputDecoration(
+                            labelText: 'Active App Drawer Icon',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.palette_outlined),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'default',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.crop_square_rounded, color: Color(0xFF6750A4)),
+                                  SizedBox(width: 12),
+                                  Text('Default (Standard MateEazy Icon)'),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: 'diwali',
+                              child: Row(
+                                children: [
+                                  Text('🪔', style: TextStyle(fontSize: 18)),
+                                  SizedBox(width: 12),
+                                  Text('Diwali Festival (Golden Diya Theme)'),
+                                ],
+                              ),
+                            ),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setState(() => _activeIcon = val);
+                          },
                         ),
                       ],
                     ),

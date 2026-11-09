@@ -16,6 +16,7 @@ class AdminBrandingConfig {
     this.developerSupportNote,
     this.developerUpiAmount,
     this.developerUpiNote,
+    this.activeIcon,
     this.updatedAt,
   });
 
@@ -42,6 +43,9 @@ class AdminBrandingConfig {
 
   /// The note / remark pre-filled in the payer's UPI app.
   final String? developerUpiNote;
+
+  /// Active launcher icon (e.g. "default", "diwali").
+  final String? activeIcon;
   final DateTime? updatedAt;
 
   factory AdminBrandingConfig.fromJson(Map<String, dynamic> json) =>
@@ -62,6 +66,7 @@ class AdminBrandingConfig {
         developerSupportNote: json['developerSupportNote'] as String?,
         developerUpiAmount: (json['developerUpiAmount'] as num?)?.toInt(),
         developerUpiNote: json['developerUpiNote'] as String?,
+        activeIcon: json['activeIcon'] as String? ?? 'default',
         updatedAt: json['updatedAt'] != null
             ? DateTime.tryParse(json['updatedAt'] as String)
             : null,
@@ -85,6 +90,7 @@ class AdminBrandingUpdateRequest {
     this.developerSupportNote,
     this.developerUpiAmount,
     this.developerUpiNote,
+    this.activeIcon,
   });
 
   final String appName;
@@ -104,6 +110,7 @@ class AdminBrandingUpdateRequest {
   /// 0 clears the amount (the payer types their own).
   final int? developerUpiAmount;
   final String? developerUpiNote;
+  final String? activeIcon;
 
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{
@@ -123,6 +130,7 @@ class AdminBrandingUpdateRequest {
     if (developerSupportNote != null) map['developerSupportNote'] = developerSupportNote;
     if (developerUpiAmount != null) map['developerUpiAmount'] = developerUpiAmount;
     if (developerUpiNote != null) map['developerUpiNote'] = developerUpiNote;
+    if (activeIcon != null) map['activeIcon'] = activeIcon;
     return map;
   }
 }
