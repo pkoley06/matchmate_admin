@@ -36,6 +36,7 @@ class AdminAnnouncementBroadcastRequest {
     required this.body,
     this.imageUrl,
     this.actionRoute = '/home',
+    this.broadcastAll = true,
     this.userIds,
   });
 
@@ -43,6 +44,7 @@ class AdminAnnouncementBroadcastRequest {
   final String body;
   final String? imageUrl;
   final String actionRoute;
+  final bool broadcastAll;
   final List<String>? userIds;
 
   Map<String, dynamic> toJson() => {
@@ -51,6 +53,7 @@ class AdminAnnouncementBroadcastRequest {
         if (imageUrl != null && imageUrl!.trim().isNotEmpty)
           'imageUrl': imageUrl!.trim(),
         'actionRoute': actionRoute,
-        if (userIds != null && userIds!.isNotEmpty) 'userIds': userIds,
+        'broadcastAll': broadcastAll,
+        if (userIds != null) 'userIds': userIds,
       };
 }

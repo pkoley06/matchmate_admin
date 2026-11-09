@@ -157,6 +157,9 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
     setState(() => _sending = true);
     final messenger = ScaffoldMessenger.of(context);
 
+    final wasBroadcast = _targetAllUsers;
+    final recipientCount = _selectedUsers.length;
+
     final success = await ref
         .read(announcementsControllerProvider.notifier)
         .broadcast(
@@ -165,6 +168,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
             body: _bodyController.text.trim(),
             imageUrl: _imageController.text.trim(),
             actionRoute: _routeController.text.trim(),
+            broadcastAll: _targetAllUsers,
             userIds: _targetAllUsers ? null : _selectedUsers.keys.toList(),
           ),
         );
@@ -183,9 +187,9 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
       });
       messenger.showSnackBar(
         SnackBar(
-          content: Text(_targetAllUsers
+          content: Text(wasBroadcast
               ? 'Event successfully broadcast to all users!'
-              : 'Event notification sent to ${_selectedUsers.length} selected user(s)!'),
+              : 'Event notification sent to $recipientCount selected user(s)!'),
           backgroundColor: Colors.green,
         ),
       );
