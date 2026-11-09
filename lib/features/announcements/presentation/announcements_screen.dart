@@ -102,11 +102,18 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.campaign, color: Colors.amber),
-            SizedBox(width: 8),
-            Text('Send Event Notification'),
+            Icon(
+              _targetAllUsers ? Icons.campaign : Icons.person_search,
+              color: Colors.amber,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _targetAllUsers
+                  ? 'Broadcast to All Users'
+                  : 'Send to ${_selectedUsers.length} Selected User(s)',
+            ),
           ],
         ),
         content: Column(
@@ -145,8 +152,14 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
           ),
           FilledButton.icon(
             onPressed: () => Navigator.of(ctx).pop(true),
-            icon: const Icon(Icons.send_rounded),
-            label: const Text('Send Now'),
+            icon: Icon(
+              _targetAllUsers ? Icons.campaign_rounded : Icons.send_rounded,
+            ),
+            label: Text(
+              _targetAllUsers
+                  ? 'Broadcast to All'
+                  : 'Send to ${_selectedUsers.length} User(s)',
+            ),
           ),
         ],
       ),
@@ -263,7 +276,9 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                                 ),
                               ),
                               Text(
-                                'Broadcast greetings, events or offers to all users with or without an image.',
+                                _targetAllUsers
+                                    ? 'Broadcast greetings, events or offers to all users with or without an image.'
+                                    : 'Send event or announcement to ${_selectedUsers.length} selected user(s).',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
@@ -607,10 +622,18 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                                     color: Colors.white,
                                   ),
                                 )
-                              : const Icon(Icons.send_rounded),
+                              : Icon(
+                                  _targetAllUsers
+                                      ? Icons.campaign_rounded
+                                      : Icons.send_rounded,
+                                ),
                           label: Text(_sending
-                              ? 'Broadcasting to all users…'
-                              : 'Broadcast Event to All Users'),
+                              ? (_targetAllUsers
+                                  ? 'Broadcasting to all users…'
+                                  : 'Sending to ${_selectedUsers.length} user(s)…')
+                              : (_targetAllUsers
+                                  ? 'Broadcast Event to All Users'
+                                  : 'Send Event to ${_selectedUsers.length} Selected User(s)')),
                         ),
                       ),
                     ],
