@@ -172,7 +172,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
-                          hintText: 'Search by full name...',
+                          hintText: 'Search by name, email or phone...',
                           prefixIcon: const Icon(Icons.search),
                           suffixIcon: _searchController.text.isNotEmpty
                               ? IconButton(
@@ -308,6 +308,16 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
                                     Text(
                                       user.lastKnownLocality ?? 'Unknown locality',
                                     ),
+                                    if (adminSignInIdentifier(email: user.email, phoneNumber: user.phoneNumber) case final id?) ...[
+                                      const SizedBox(width: 12),
+                                      Icon(
+                                        user.email != null ? Icons.mail_outline : Icons.phone_outlined,
+                                        size: 14,
+                                        color: theme.colorScheme.outline,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      SelectableText(id),
+                                    ],
                                     const SizedBox(width: 12),
                                     Chip(
                                       label: Text(

@@ -17,6 +17,10 @@ class AdminBrandingConfig {
     this.developerUpiAmount,
     this.developerUpiNote,
     this.activeIcon,
+    this.latestBuildNumber = 7,
+    this.minSupportedBuildNumber = 5,
+    this.releaseNotes,
+    this.updateUrl,
     this.updatedAt,
   });
 
@@ -46,6 +50,10 @@ class AdminBrandingConfig {
 
   /// Active launcher icon (e.g. "default", "diwali").
   final String? activeIcon;
+  final int latestBuildNumber;
+  final int minSupportedBuildNumber;
+  final String? releaseNotes;
+  final String? updateUrl;
   final DateTime? updatedAt;
 
   factory AdminBrandingConfig.fromJson(Map<String, dynamic> json) =>
@@ -67,6 +75,11 @@ class AdminBrandingConfig {
         developerUpiAmount: (json['developerUpiAmount'] as num?)?.toInt(),
         developerUpiNote: json['developerUpiNote'] as String?,
         activeIcon: json['activeIcon'] as String? ?? 'default',
+        latestBuildNumber: (json['latestBuildNumber'] as num?)?.toInt() ?? 7,
+        minSupportedBuildNumber:
+            (json['minSupportedBuildNumber'] as num?)?.toInt() ?? 5,
+        releaseNotes: json['releaseNotes'] as String?,
+        updateUrl: json['updateUrl'] as String?,
         updatedAt: json['updatedAt'] != null
             ? DateTime.tryParse(json['updatedAt'] as String)
             : null,
@@ -91,6 +104,10 @@ class AdminBrandingUpdateRequest {
     this.developerUpiAmount,
     this.developerUpiNote,
     this.activeIcon,
+    this.latestBuildNumber,
+    this.minSupportedBuildNumber,
+    this.releaseNotes,
+    this.updateUrl,
   });
 
   final String appName;
@@ -111,6 +128,10 @@ class AdminBrandingUpdateRequest {
   final int? developerUpiAmount;
   final String? developerUpiNote;
   final String? activeIcon;
+  final int? latestBuildNumber;
+  final int? minSupportedBuildNumber;
+  final String? releaseNotes;
+  final String? updateUrl;
 
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{
@@ -131,6 +152,12 @@ class AdminBrandingUpdateRequest {
     if (developerUpiAmount != null) map['developerUpiAmount'] = developerUpiAmount;
     if (developerUpiNote != null) map['developerUpiNote'] = developerUpiNote;
     if (activeIcon != null) map['activeIcon'] = activeIcon;
+    if (latestBuildNumber != null) map['latestBuildNumber'] = latestBuildNumber;
+    if (minSupportedBuildNumber != null) {
+      map['minSupportedBuildNumber'] = minSupportedBuildNumber;
+    }
+    if (releaseNotes != null) map['releaseNotes'] = releaseNotes;
+    if (updateUrl != null) map['updateUrl'] = updateUrl;
     return map;
   }
 }

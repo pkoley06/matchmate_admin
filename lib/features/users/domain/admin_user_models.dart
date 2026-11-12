@@ -54,6 +54,8 @@ class AdminUserSummary {
     this.age,
     this.lastKnownLocality,
     this.primaryAuthProvider,
+    this.email,
+    this.phoneNumber,
     required this.isActive,
     this.accountStatus = AdminAccountStatus.active,
     this.isSuspended = false,
@@ -69,6 +71,8 @@ class AdminUserSummary {
   final int? age;
   final String? lastKnownLocality;
   final String? primaryAuthProvider;
+  final String? email;
+  final String? phoneNumber;
   final bool isActive;
   final AdminAccountStatus accountStatus;
   final bool isSuspended;
@@ -91,6 +95,8 @@ class AdminUserSummary {
         age: age,
         lastKnownLocality: lastKnownLocality,
         primaryAuthProvider: primaryAuthProvider,
+        email: email,
+        phoneNumber: phoneNumber,
         isActive: isActive ?? this.isActive,
         accountStatus: accountStatus ?? this.accountStatus,
         isSuspended: isSuspended ?? this.isSuspended,
@@ -111,6 +117,8 @@ class AdminUserSummary {
       age: (json['age'] as num?)?.toInt(),
       lastKnownLocality: json['lastKnownLocality'] as String?,
       primaryAuthProvider: json['primaryAuthProvider'] as String?,
+      email: json['email'] as String?,
+      phoneNumber: json['phoneNumber'] as String?,
       isActive: isActive,
       accountStatus: AdminAccountStatus.fromJson(
         json['accountStatus'] as String?,
@@ -124,6 +132,13 @@ class AdminUserSummary {
           : null,
     );
   }
+}
+
+/// The identifier the user signed in with: email for Google, phone for OTP.
+String? adminSignInIdentifier({String? email, String? phoneNumber}) {
+  if (email != null && email.isNotEmpty) return email;
+  if (phoneNumber != null && phoneNumber.isNotEmpty) return phoneNumber;
+  return null;
 }
 
 class AdminUserDetail {
@@ -144,6 +159,8 @@ class AdminUserDetail {
     this.guestTolerance,
     this.lastKnownLocality,
     this.primaryAuthProvider,
+    this.email,
+    this.phoneNumber,
     required this.isActive,
     this.accountStatus = AdminAccountStatus.active,
     this.disabledAt,
@@ -172,6 +189,8 @@ class AdminUserDetail {
   final String? guestTolerance;
   final String? lastKnownLocality;
   final String? primaryAuthProvider;
+  final String? email;
+  final String? phoneNumber;
   final bool isActive;
   final AdminAccountStatus accountStatus;
   final DateTime? disabledAt;
@@ -205,6 +224,8 @@ class AdminUserDetail {
       guestTolerance: json['guestTolerance'] as String?,
       lastKnownLocality: json['lastKnownLocality'] as String?,
       primaryAuthProvider: json['primaryAuthProvider'] as String?,
+      email: json['email'] as String?,
+      phoneNumber: json['phoneNumber'] as String?,
       isActive: isActive,
       accountStatus: AdminAccountStatus.fromJson(
         json['accountStatus'] as String?,
@@ -264,7 +285,7 @@ class AdminUserPage {
         size: (json['size'] as num?)?.toInt() ?? 20,
         totalElements: (json['totalElements'] as num?)?.toInt() ?? 0,
         totalPages: (json['totalPages'] as num?)?.toInt() ?? 0,
-        isLast: json['isLast'] as bool? ?? true,
+        isLast: (json['isLast'] ?? json['last']) as bool? ?? true,
       );
 }
 

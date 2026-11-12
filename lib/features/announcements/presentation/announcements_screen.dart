@@ -37,11 +37,17 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
     super.dispose();
   }
 
-  void _applyPreset(String title, String bodySuggestion) {
+  void _applyPreset(String title, String bodySuggestion, {String? route}) {
     setState(() {
       _titleController.text = title;
-      if (_bodyController.text.trim().isEmpty) {
+      if (_bodyController.text.trim().isEmpty ||
+          _bodyController.text.contains('MateEazy') ||
+          _bodyController.text.contains('update') ||
+          _bodyController.text.contains('festival')) {
         _bodyController.text = bodySuggestion;
+      }
+      if (route != null) {
+        _routeController.text = route;
       }
     });
   }
@@ -99,14 +105,24 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
       return;
     }
 
+    final routeText = _routeController.text.trim();
+    final titleText = _titleController.text.trim();
+    final bodyText = _bodyController.text.trim();
+    final isAppUpdate = routeText.contains('play.google.com') ||
+        routeText.contains('market://') ||
+        titleText.toLowerCase().contains('update') ||
+        bodyText.toLowerCase().contains('update');
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
             Icon(
-              _targetAllUsers ? Icons.campaign : Icons.person_search,
-              color: Colors.amber,
+              isAppUpdate
+                  ? Icons.system_update_rounded
+                  : (_targetAllUsers ? Icons.campaign : Icons.person_search),
+              color: isAppUpdate ? Colors.deepPurple : Colors.amber,
             ),
             const SizedBox(width: 8),
             Text(
@@ -120,6 +136,33 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (isAppUpdate) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.deepPurple.shade200),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.rocket_launch, size: 16, color: Colors.deepPurple),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'App Update Mode: Tapping notification will open Google Play Store directly!',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.deepPurple.shade800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             Text(
               _targetAllUsers
                   ? 'This will send an in-app notification and push alert to ALL registered users immediately.'
@@ -134,10 +177,13 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
               ),
             ],
             const SizedBox(height: 12),
-            Text('Title: ${_titleController.text.trim()}',
+            Text('Title: $titleText',
                 style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            Text('Message: ${_bodyController.text.trim()}'),
+            Text('Message: $bodyText'),
+            const SizedBox(height: 4),
+            Text('Target Route: ${routeText.isEmpty ? '/home' : routeText}',
+                style: const TextStyle(color: Colors.blueGrey, fontSize: 13)),
             if (_imageController.text.trim().isNotEmpty) ...[
               const SizedBox(height: 8),
               const Text('Includes Event Banner Image: Yes',
@@ -177,10 +223,11 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
         .read(announcementsControllerProvider.notifier)
         .broadcast(
           AdminAnnouncementBroadcastRequest(
-            title: _titleController.text.trim(),
-            body: _bodyController.text.trim(),
+            title: titleText,
+            body: bodyText,
             imageUrl: _imageController.text.trim(),
-            actionRoute: _routeController.text.trim(),
+            actionRoute: routeText.isEmpty ? '/home' : routeText,
+            type: isAppUpdate ? 'APP_UPDATE' : null,
             broadcastAll: _targetAllUsers,
             userIds: _targetAllUsers ? null : _selectedUsers.keys.toList(),
           ),
@@ -453,6 +500,16 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                         runSpacing: 8,
                         children: [
                           ActionChip(
+                            avatar: const Text('🚀'),
+                            label: const Text('App Update (Play Store)'),
+                            onPressed: () => _applyPreset(
+                              '🚀 New Update Available on Google Play!',
+                              'A new version of MateEazy is available on Google Play with new features, performance improvements, and bug fixes. Tap here to update now! 📲',
+                              route:
+                                  'https://play.google.com/store/apps/details?id=com.mateeazy.app',
+                            ),
+                          ),
+                          ActionChip(
                             avatar: const Text('🪔'),
                             label: const Text('Diwali Greeting'),
                             onPressed: () => _applyPreset(
@@ -594,11 +651,36 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                       TextFormField(
                         controller: _routeController,
                         decoration: const InputDecoration(
-                          labelText: 'Deep-Link Route (Optional)',
-                          hintText: 'e.g. /home or /notifications or /discover/room/<id>',
+                          labelText: 'Deep-Link Route or URL (Optional)',
+                          hintText: 'e.g. https://play.google.com/store/apps/details?id=com.mateeazy.app or /home',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.link_outlined),
                         ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          ActionChip(
+                            avatar: const Icon(Icons.shop_outlined, size: 16),
+                            label: const Text('Play Store Link'),
+                            onPressed: () => setState(() => _routeController.text =
+                                'https://play.google.com/store/apps/details?id=com.mateeazy.app'),
+                          ),
+                          ActionChip(
+                            avatar: const Icon(Icons.home_outlined, size: 16),
+                            label: const Text('/home'),
+                            onPressed: () =>
+                                setState(() => _routeController.text = '/home'),
+                          ),
+                          ActionChip(
+                            avatar: const Icon(Icons.notifications_outlined, size: 16),
+                            label: const Text('/notifications'),
+                            onPressed: () => setState(
+                                () => _routeController.text = '/notifications'),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 24),
 

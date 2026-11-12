@@ -257,7 +257,7 @@ class AdminRoomPage {
         size: (json['size'] as num?)?.toInt() ?? 20,
         totalElements: (json['totalElements'] as num?)?.toInt() ?? 0,
         totalPages: (json['totalPages'] as num?)?.toInt() ?? 0,
-        isLast: json['isLast'] as bool? ?? true,
+        isLast: (json['isLast'] ?? json['last']) as bool? ?? true,
       );
 }
 

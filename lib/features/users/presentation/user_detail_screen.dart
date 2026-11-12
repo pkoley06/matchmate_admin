@@ -536,6 +536,8 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
             'Bio',
             user.bio?.trim().isNotEmpty == true ? user.bio!.trim() : '—',
           ),
+          AdminInfoRow('Email', user.email ?? '—'),
+          AdminInfoRow('Phone', user.phoneNumber ?? '—'),
           AdminInfoRow('Signs in with', user.primaryAuthProvider ?? '—'),
           AdminInfoRow('Joined', formatAdminDate(user.createdAt)),
           AdminInfoRow('Last updated', formatAdminDate(user.updatedAt)),

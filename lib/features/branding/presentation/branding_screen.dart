@@ -30,6 +30,12 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
   final _developerNoteController = TextEditingController();
   final _developerUpiAmountController = TextEditingController();
   final _developerUpiNoteController = TextEditingController();
+  final _latestBuildController = TextEditingController(text: '7');
+  final _minSupportedBuildController = TextEditingController(text: '5');
+  final _releaseNotesController = TextEditingController();
+  final _updateUrlController = TextEditingController(
+    text: 'https://play.google.com/store/apps/details?id=com.mateeazy.app',
+  );
   String _activeIcon = 'default';
   bool _maintenance = false;
   bool _initialized = false;
@@ -53,6 +59,10 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
     _developerNoteController.dispose();
     _developerUpiAmountController.dispose();
     _developerUpiNoteController.dispose();
+    _latestBuildController.dispose();
+    _minSupportedBuildController.dispose();
+    _releaseNotesController.dispose();
+    _updateUrlController.dispose();
     super.dispose();
   }
 
@@ -73,6 +83,12 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
     _developerUpiAmountController.text =
         config.developerUpiAmount?.toString() ?? '';
     _developerUpiNoteController.text = config.developerUpiNote ?? '';
+    _latestBuildController.text = config.latestBuildNumber.toString();
+    _minSupportedBuildController.text =
+        config.minSupportedBuildNumber.toString();
+    _releaseNotesController.text = config.releaseNotes ?? '';
+    _updateUrlController.text = config.updateUrl ??
+        'https://play.google.com/store/apps/details?id=com.mateeazy.app';
     _activeIcon = config.activeIcon ?? 'default';
     _maintenance = config.maintenanceMode;
     _initialized = true;
@@ -133,6 +149,12 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
                 int.tryParse(_developerUpiAmountController.text.trim()) ?? 0,
             developerUpiNote: _developerUpiNoteController.text.trim(),
             activeIcon: _activeIcon,
+            latestBuildNumber:
+                int.tryParse(_latestBuildController.text.trim()) ?? 7,
+            minSupportedBuildNumber:
+                int.tryParse(_minSupportedBuildController.text.trim()) ?? 5,
+            releaseNotes: _releaseNotesController.text.trim(),
+            updateUrl: _updateUrlController.text.trim(),
           ),
         );
 
@@ -511,6 +533,69 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
                             border: OutlineInputBorder(),
                             helperText:
                                 'The message on the "Buy me a coffee" card and payment sheet.',
+                          ),
+                          maxLines: 2,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // App Version & In-App Update Management
+                    _CardSection(
+                      title: 'App Version & In-App Updates',
+                      icon: Icons.system_update_rounded,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _latestBuildController,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  labelText: 'Latest Published Build Number *',
+                                  hintText: 'e.g. 7',
+                                  border: OutlineInputBorder(),
+                                  helperText:
+                                      'Active version on Google Play. Mobile apps with lower build numbers see update prompts.',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _minSupportedBuildController,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  labelText: 'Minimum Supported Build Number *',
+                                  hintText: 'e.g. 5',
+                                  border: OutlineInputBorder(),
+                                  helperText:
+                                      'Older builds than this will be FORCE updated (non-dismissible sheet).',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _updateUrlController,
+                          decoration: const InputDecoration(
+                            labelText: 'Play Store / Store Update URL',
+                            hintText:
+                                'https://play.google.com/store/apps/details?id=com.mateeazy.app',
+                            border: OutlineInputBorder(),
+                            helperText:
+                                'URL launched when the user taps "Update now" in the bottom sheet.',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _releaseNotesController,
+                          decoration: const InputDecoration(
+                            labelText: 'Release Notes (Shown in Update Sheet)',
+                            hintText:
+                                'e.g. New flatmate search features, chat improvements, and bug fixes.',
+                            border: OutlineInputBorder(),
                           ),
                           maxLines: 2,
                         ),

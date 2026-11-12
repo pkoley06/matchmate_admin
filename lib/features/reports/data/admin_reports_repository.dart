@@ -23,7 +23,7 @@ class AdminReportsRepository {
       content: content,
       totalElements: (data['totalElements'] as num?)?.toInt() ?? content.length,
       totalPages: (data['totalPages'] as num?)?.toInt() ?? 1,
-      isLast: data['isLast'] as bool? ?? true,
+      isLast: (data['isLast'] ?? data['last']) as bool? ?? true,
     );
   }
 

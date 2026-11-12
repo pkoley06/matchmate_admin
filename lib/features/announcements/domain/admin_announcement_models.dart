@@ -36,6 +36,7 @@ class AdminAnnouncementBroadcastRequest {
     required this.body,
     this.imageUrl,
     this.actionRoute = '/home',
+    this.type,
     this.broadcastAll = true,
     this.userIds,
   });
@@ -44,6 +45,7 @@ class AdminAnnouncementBroadcastRequest {
   final String body;
   final String? imageUrl;
   final String actionRoute;
+  final String? type;
   final bool broadcastAll;
   final List<String>? userIds;
 
@@ -53,6 +55,7 @@ class AdminAnnouncementBroadcastRequest {
         if (imageUrl != null && imageUrl!.trim().isNotEmpty)
           'imageUrl': imageUrl!.trim(),
         'actionRoute': actionRoute,
+        if (type != null && type!.trim().isNotEmpty) 'type': type!.trim(),
         'broadcastAll': broadcastAll,
         if (userIds != null) 'userIds': userIds,
       };

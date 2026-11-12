@@ -12,7 +12,7 @@ class MatchMateAdminApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
-      title: 'MatchMate Admin',
+      title: 'MateEazy Admin',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       routerConfig: router,

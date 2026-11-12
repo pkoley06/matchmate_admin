@@ -71,6 +71,6 @@ class AdminCommentPage {
         page: (json['page'] as num?)?.toInt() ?? 0,
         totalElements: (json['totalElements'] as num?)?.toInt() ?? 0,
         totalPages: (json['totalPages'] as num?)?.toInt() ?? 1,
-        isLast: json['isLast'] as bool? ?? true,
+        isLast: (json['isLast'] ?? json['last']) as bool? ?? true,
       );
 }
