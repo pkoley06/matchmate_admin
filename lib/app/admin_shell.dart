@@ -17,6 +17,11 @@ class AdminShell extends ConsumerWidget {
     (icon: Icons.flag_outlined, active: Icons.flag, label: 'Reports'),
     (icon: Icons.block_outlined, active: Icons.block, label: 'Blocks'),
     (icon: Icons.forum_outlined, active: Icons.forum, label: 'Comments'),
+    (
+      icon: Icons.diversity_3_outlined,
+      active: Icons.diversity_3,
+      label: 'Community',
+    ),
     (icon: Icons.palette_outlined, active: Icons.palette, label: 'Branding'),
     (icon: Icons.quiz_outlined, active: Icons.quiz, label: 'Questionnaire'),
     (

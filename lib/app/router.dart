@@ -9,6 +9,7 @@ import '../features/auth/presentation/admin_splash_screen.dart';
 import '../features/blocks/presentation/blocks_screen.dart';
 import '../features/branding/presentation/branding_screen.dart';
 import '../features/comments/presentation/comments_screen.dart';
+import '../features/community/presentation/admin_community_screen.dart';
 import '../features/questionnaire/presentation/questionnaire_screen.dart';
 import '../features/reports/presentation/reports_screen.dart';
 import '../features/rooms/presentation/room_detail_screen.dart';
@@ -25,6 +26,7 @@ abstract final class Routes {
   static const reports = '/reports';
   static const blocks = '/blocks';
   static const comments = '/comments';
+  static const community = '/community';
   static const branding = '/branding';
   static const questionnaire = '/questionnaire';
   static const announcements = '/announcements';
@@ -120,6 +122,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.comments,
                 builder: (_, _) => const CommentsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.community,
+                builder: (_, _) => const AdminCommunityScreen(),
               ),
             ],
           ),
