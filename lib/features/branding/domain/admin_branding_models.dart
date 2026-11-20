@@ -10,6 +10,7 @@ class AdminBrandingConfig {
     this.termsUrl,
     this.privacyUrl,
     required this.maintenanceMode,
+    this.communityEnabled = true,
     this.googleMapsApiKey,
     this.developerUpiId,
     this.developerQrCodeUrl,
@@ -34,6 +35,7 @@ class AdminBrandingConfig {
   final String? termsUrl;
   final String? privacyUrl;
   final bool maintenanceMode;
+  final bool communityEnabled;
   /// Google Maps / Places API key; stored server-side and served to the
   /// mobile app via the public /api/v1/branding endpoint.
   final String? googleMapsApiKey;
@@ -68,6 +70,7 @@ class AdminBrandingConfig {
         termsUrl: json['termsUrl'] as String?,
         privacyUrl: json['privacyUrl'] as String?,
         maintenanceMode: json['maintenanceMode'] as bool? ?? false,
+        communityEnabled: json['communityEnabled'] as bool? ?? true,
         googleMapsApiKey: json['googleMapsApiKey'] as String?,
         developerUpiId: json['developerUpiId'] as String?,
         developerQrCodeUrl: json['developerQrCodeUrl'] as String?,
@@ -97,6 +100,7 @@ class AdminBrandingUpdateRequest {
     this.termsUrl,
     this.privacyUrl,
     this.maintenanceMode,
+    this.communityEnabled,
     this.googleMapsApiKey,
     this.developerUpiId,
     this.developerQrCodeUrl,
@@ -119,6 +123,7 @@ class AdminBrandingUpdateRequest {
   final String? termsUrl;
   final String? privacyUrl;
   final bool? maintenanceMode;
+  final bool? communityEnabled;
   final String? googleMapsApiKey;
   final String? developerUpiId;
   final String? developerQrCodeUrl;
@@ -145,6 +150,7 @@ class AdminBrandingUpdateRequest {
     if (termsUrl != null) map['termsUrl'] = termsUrl;
     if (privacyUrl != null) map['privacyUrl'] = privacyUrl;
     if (maintenanceMode != null) map['maintenanceMode'] = maintenanceMode;
+    if (communityEnabled != null) map['communityEnabled'] = communityEnabled;
     if (googleMapsApiKey != null) map['googleMapsApiKey'] = googleMapsApiKey;
     if (developerUpiId != null) map['developerUpiId'] = developerUpiId;
     if (developerQrCodeUrl != null) map['developerQrCodeUrl'] = developerQrCodeUrl;

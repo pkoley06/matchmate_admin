@@ -38,6 +38,7 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
   );
   String _activeIcon = 'default';
   bool _maintenance = false;
+  bool _communityEnabled = true;
   bool _initialized = false;
 
   /// The branding image being uploaded right now, if any.
@@ -91,6 +92,7 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
         'https://play.google.com/store/apps/details?id=com.mateeazy.app';
     _activeIcon = config.activeIcon ?? 'default';
     _maintenance = config.maintenanceMode;
+    _communityEnabled = config.communityEnabled;
     _initialized = true;
   }
 
@@ -139,6 +141,7 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
             termsUrl: _termsController.text.trim(),
             privacyUrl: _privacyController.text.trim(),
             maintenanceMode: _maintenance,
+            communityEnabled: _communityEnabled,
             googleMapsApiKey: _mapsKeyController.text.trim(),
             developerUpiId: _developerUpiController.text.trim(),
             developerQrCodeUrl: _developerQrCodeController.text.trim(),
@@ -602,6 +605,23 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
+
+                    _CardSection(
+                      title: 'Community',
+                      icon: Icons.groups_outlined,
+                      children: [
+                        SwitchListTile(
+                          title: const Text('Enable Community'),
+                          subtitle: const Text(
+                            'Feed, posts, statuses and follows. When off, the app hides every community section and the API rejects those requests.',
+                          ),
+                          value: _communityEnabled,
+                          onChanged: (val) =>
+                              setState(() => _communityEnabled = val),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
 
                     // System Status
                     _CardSection(
