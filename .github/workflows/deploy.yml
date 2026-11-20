@@ -1,0 +1,81 @@
+name: Build & Deploy Admin
+
+on:
+  # dev  -> https://staging-admin.mateeazy.in (talks to staging-api.mateeazy.in)
+  # prod -> https://admin.mateeazy.in         (talks to api.mateeazy.in)
+  # Release = merge dev into prod.
+  push:
+    branches: [dev, prod]
+  pull_request:
+    branches: [dev, prod]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # One run at a time per branch; a newer push waits instead of cutting an upload short.
+  group: admin-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    name: Build & Deploy (${{ github.ref_name == 'prod' && 'production' || 'staging' }})
+    runs-on: ubuntu-latest
+    env:
+      TARGET: ${{ github.ref_name == 'prod' && 'production' || 'staging' }}
+      ENV_FILE: ${{ github.ref_name == 'prod' && 'env/oci.json' || 'env/staging.json' }}
+      SITE_URL: ${{ github.ref_name == 'prod' && 'https://admin.mateeazy.in' || 'https://staging-admin.mateeazy.in' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.2
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build web (${{ env.ENV_FILE }})
+        run: flutter build web --release --dart-define-from-file=${ENV_FILE}
+
+      - name: Configure SSH credentials
+        if: github.event_name != 'pull_request' && (github.ref_name == 'dev' || github.ref_name == 'prod')
+        env:
+          SSH_KEY: ${{ secrets.ADMIN_DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.OCI_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${SSH_KEY}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy to ${{ env.SITE_URL }}
+        if: github.event_name != 'pull_request' && (github.ref_name == 'dev' || github.ref_name == 'prod')
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+        run: |
+          # The key's forced command on the VM (/usr/local/bin/mateeazy-admin-deploy)
+          # unpacks this archive into the right /var/www folder.
+          tar -czf - -C build/web . \
+            | ssh -o IdentitiesOnly=yes -o BatchMode=yes -i ~/.ssh/id_ed25519 "deploy@${OCI_HOST}" "${TARGET}"
+
+      - name: Verify site
+        if: github.event_name != 'pull_request' && (github.ref_name == 'dev' || github.ref_name == 'prod')
+        run: |
+          curl -fsS "${SITE_URL}/version.json"
+          curl -fsS "${SITE_URL}/" | grep -q "<title>MateEazy Admin</title>"
+          echo "${SITE_URL} is serving the new build."

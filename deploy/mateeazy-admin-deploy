@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# MateEazy Admin panel deploy (runs on the VM)
+# Installed at: /usr/local/bin/mateeazy-admin-deploy (root:root, mode 0755)
+#
+# It is the *forced command* of the admin CI key in /home/deploy/.ssh/authorized_keys:
+#   restrict,command="/usr/local/bin/mateeazy-admin-deploy" ssh-ed25519 AAAA... github-deploy@matchmate-admin
+# so that key can do nothing except this. CI runs:
+#   tar -czf - -C build/web . | ssh deploy@<vm> staging|production
+#   staging    -> /var/www/mateeazy-admin-staging  (https://staging-admin.mateeazy.in)
+#   production -> /var/www/mateeazy-admin          (https://admin.mateeazy.in)
+# ==============================================================================
+set -euo pipefail
+
+TARGET="${SSH_ORIGINAL_COMMAND:-${1:-}}"
+case "${TARGET}" in
+    production) DEST="/var/www/mateeazy-admin" ;;
+    staging)    DEST="/var/www/mateeazy-admin-staging" ;;
+    *)
+        echo "Error: target must be 'production' or 'staging' (got '${TARGET}')." >&2
+        exit 1
+        ;;
+esac
+
+if [ ! -d "${DEST}" ] || [ ! -w "${DEST}" ]; then
+    echo "Error: ${DEST} is missing or not writable by $(id -un)." >&2
+    exit 1
+fi
+
+TMP_DIR="$(mktemp -d /tmp/admin-deploy.XXXXXX)"
+trap 'rm -rf "${TMP_DIR}"' EXIT
+
+# The build arrives as a .tar.gz on stdin (capped at 200 MB).
+head -c 200000000 | tar -xzf - -C "${TMP_DIR}" --no-same-owner
+
+if [ ! -f "${TMP_DIR}/index.html" ] || [ ! -f "${TMP_DIR}/main.dart.js" ]; then
+    echo "Error: upload is not a Flutter web build (index.html / main.dart.js missing)." >&2
+    exit 1
+fi
+
+# --delay-updates swaps the files in at the end, so visitors never load a half-copied
+# build; --no-links drops symlinks so nothing can point nginx outside the web root.
+rsync -a --no-links --delete --delay-updates --chmod=D755,F644 "${TMP_DIR}/" "${DEST}/"
+
+echo "Admin panel deployed to ${TARGET} (${DEST}): $(cat "${DEST}/version.json" 2>/dev/null || echo '?')"
