@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,8 @@ import 'package:matchmate_admin/core/uploads/admin_upload_api.dart';
 import 'package:matchmate_admin/features/branding/data/admin_branding_repository.dart';
 import 'package:matchmate_admin/features/branding/domain/admin_branding_models.dart';
 import 'package:matchmate_admin/features/branding/presentation/branding_screen.dart';
+import 'package:matchmate_admin/features/community/data/admin_community_api.dart';
+import 'package:matchmate_admin/features/community/domain/admin_community_models.dart';
 import 'package:matchmate_admin/features/comments/data/admin_comments_repository.dart';
 import 'package:matchmate_admin/features/comments/domain/admin_comment_models.dart';
 import 'package:matchmate_admin/features/rooms/data/admin_rooms_repository.dart';
@@ -16,6 +19,30 @@ import 'package:matchmate_admin/features/rooms/presentation/room_form_dialog.dar
 import 'package:matchmate_admin/features/users/data/admin_users_repository.dart';
 import 'package:matchmate_admin/features/users/domain/admin_user_models.dart';
 import 'package:matchmate_admin/features/users/presentation/user_detail_screen.dart';
+
+/// The user page lists the person's posts and statuses; none here.
+class _FakeCommunity extends AdminCommunityApi {
+  _FakeCommunity() : super(Dio());
+
+  @override
+  Future<Paged<AdminCommunityPost>> listPosts({
+    String? search,
+    String? category,
+    PostFilter filter = PostFilter.all,
+    String? authorId,
+    int page = 0,
+    int size = 20,
+  }) async => const Paged();
+
+  @override
+  Future<Paged<AdminUserStatus>> listStatuses({
+    StatusFilter filter = StatusFilter.live,
+    String? search,
+    String? userId,
+    int page = 0,
+    int size = 24,
+  }) async => const Paged();
+}
 
 const _room = AdminRoomDetail(
   id: 'room-1',
@@ -271,6 +298,7 @@ Future<void> _pump(
         adminUsersRepositoryProvider.overrideWithValue(users ?? _FakeUsers()),
         adminUploadApiProvider.overrideWithValue(uploads ?? _FakeUploads()),
         imagePickerProvider.overrideWithValue(_FakePicker(pickCount)),
+        adminCommunityApiProvider.overrideWithValue(_FakeCommunity()),
         if (branding != null)
           adminBrandingRepositoryProvider.overrideWithValue(branding),
       ],

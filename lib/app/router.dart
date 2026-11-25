@@ -10,6 +10,8 @@ import '../features/blocks/presentation/blocks_screen.dart';
 import '../features/branding/presentation/branding_screen.dart';
 import '../features/comments/presentation/comments_screen.dart';
 import '../features/community/presentation/admin_community_screen.dart';
+import '../features/community/presentation/community_post_screen.dart';
+import '../features/dashboard/presentation/overview_screen.dart';
 import '../features/questionnaire/presentation/questionnaire_screen.dart';
 import '../features/reports/presentation/reports_screen.dart';
 import '../features/rooms/presentation/room_detail_screen.dart';
@@ -21,6 +23,7 @@ import 'admin_shell.dart';
 abstract final class Routes {
   static const splash = '/splash';
   static const login = '/login';
+  static const overview = '/overview';
   static const users = '/users';
   static const rooms = '/rooms';
   static const reports = '/reports';
@@ -36,6 +39,12 @@ abstract final class Routes {
 
   /// One user's page: photo, details, moderation, their listings.
   static String user(String id) => '$users/$id';
+
+  /// One community post: photos, comments, reports, moderation.
+  static String communityPost(String id) => '$community/posts/$id';
+
+  /// Community page opened on the Statuses tab.
+  static const communityStatuses = '$community?tab=statuses';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -55,7 +64,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         AdminAuthInitializing() => loc == Routes.splash ? null : Routes.splash,
         AdminUnauthenticated() => loc == Routes.login ? null : Routes.login,
         AdminAuthenticated() =>
-          (loc == Routes.splash || loc == Routes.login) ? Routes.users : null,
+          (loc == Routes.splash || loc == Routes.login || loc == '/')
+              ? Routes.overview
+              : null,
       };
     },
     routes: [
@@ -70,95 +81,66 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AdminShell(navigationShell: navigationShell),
+        // Same order as adminDestinations in admin_shell.dart.
         branches: [
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.users,
-                builder: (_, _) => const UsersScreen(),
-                routes: [
-                  GoRoute(
-                    path: ':id',
-                    // Keyed by id: going from one user straight to another
-                    // must rebuild the page, not reuse its state.
-                    builder: (_, state) {
-                      final id = state.pathParameters['id']!;
-                      return UserDetailScreen(key: ValueKey(id), userId: id);
-                    },
-                  ),
-                ],
-              ),
-            ],
+          _branch(Routes.overview, (_, _) => const OverviewScreen()),
+          _branch(Routes.reports, (_, _) => const ReportsScreen()),
+          _branch(Routes.comments, (_, _) => const CommentsScreen()),
+          _branch(Routes.blocks, (_, _) => const BlocksScreen()),
+          _branch(
+            Routes.users,
+            (_, _) => const UsersScreen(),
+            detail: (_, state) {
+              // Keyed by id: going from one user straight to another must
+              // rebuild the page, not reuse its state.
+              final id = state.pathParameters['id']!;
+              return UserDetailScreen(key: ValueKey(id), userId: id);
+            },
           ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.rooms,
-                builder: (_, _) => const RoomsScreen(),
-                routes: [
-                  GoRoute(
-                    path: ':id',
-                    builder: (_, state) {
-                      final id = state.pathParameters['id']!;
-                      return RoomDetailScreen(key: ValueKey(id), roomId: id);
-                    },
-                  ),
-                ],
-              ),
-            ],
+          _branch(
+            Routes.rooms,
+            (_, _) => const RoomsScreen(),
+            detail: (_, state) {
+              final id = state.pathParameters['id']!;
+              return RoomDetailScreen(key: ValueKey(id), roomId: id);
+            },
           ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(path: Routes.reports, builder: (_, _) => const ReportsScreen()),
-            ],
+          _branch(
+            Routes.community,
+            (_, state) => AdminCommunityScreen(
+              key: ValueKey(state.uri.queryParameters['tab']),
+              initialTab: state.uri.queryParameters['tab'] == 'statuses'
+                  ? 1
+                  : 0,
+            ),
+            detailPath: 'posts/:id',
+            detail: (_, state) {
+              final id = state.pathParameters['id']!;
+              return CommunityPostScreen(key: ValueKey(id), postId: id);
+            },
           ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(path: Routes.blocks, builder: (_, _) => const BlocksScreen()),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.comments,
-                builder: (_, _) => const CommentsScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.community,
-                builder: (_, _) => const AdminCommunityScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.branding,
-                builder: (_, _) => const BrandingScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.questionnaire,
-                builder: (_, _) => const QuestionnaireScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.announcements,
-                builder: (_, _) => const AnnouncementsScreen(),
-              ),
-            ],
-          ),
+          _branch(Routes.announcements, (_, _) => const AnnouncementsScreen()),
+          _branch(Routes.questionnaire, (_, _) => const QuestionnaireScreen()),
+          _branch(Routes.branding, (_, _) => const BrandingScreen()),
         ],
       ),
     ],
   );
 });
+
+StatefulShellBranch _branch(
+  String path,
+  GoRouterWidgetBuilder list, {
+  GoRouterWidgetBuilder? detail,
+  String detailPath = ':id',
+}) => StatefulShellBranch(
+  routes: [
+    GoRoute(
+      path: path,
+      builder: list,
+      routes: [
+        if (detail != null) GoRoute(path: detailPath, builder: detail),
+      ],
+    ),
+  ],
+);

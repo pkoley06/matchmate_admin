@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/router.dart';
+import '../../../core/widgets/admin_detail_widgets.dart';
 import '../../../core/widgets/admin_image.dart';
+import '../../../core/widgets/admin_ui.dart';
 import '../domain/admin_user_models.dart';
 import 'user_form_dialog.dart';
 import 'users_controller.dart';
@@ -25,7 +27,9 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
   }
 
   void _onSearch(String val) {
-    ref.read(usersControllerProvider.notifier).loadUsers(search: val.trim(), page: 0);
+    ref
+        .read(usersControllerProvider.notifier)
+        .loadUsers(search: val.trim(), page: 0);
   }
 
   /// Creates a user, then opens their page.
@@ -33,9 +37,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
     final created = await UserFormDialog.show(context);
     if (created == null || !mounted) return;
     ref.read(usersControllerProvider.notifier).loadUsers(page: 0);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('User created successfully')),
-    );
+    showAdminSnack(context, 'User created successfully');
     context.go(Routes.user(created.id));
   }
 
@@ -70,7 +72,10 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () async {
               Navigator.of(ctx).pop();
               final reason = reasonController.text.trim().isEmpty
@@ -117,298 +122,87 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(usersControllerProvider);
-    final theme = Theme.of(context);
+    final controller = ref.read(usersControllerProvider.notifier);
+    final page = state.pageData;
 
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return AdminPage(
+      title: 'Users',
+      subtitle: 'Browse, inspect and moderate everyone signed up',
+      scrollable: false,
+      actions: [
+        FilledButton.icon(
+          onPressed: _showCreateDialog,
+          icon: const Icon(Icons.person_add_outlined, size: 18),
+          label: const Text('Add User'),
+        ),
+      ],
+      child: RefreshIndicator(
+        onRefresh: () => controller.loadUsers(),
+        child: ListView(
           children: [
-            // Header Row
             Row(
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'User Management',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Browse, inspect, and moderate registered users',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                  child: AdminSearchField(
+                    hint: 'Search by name, email or phone',
+                    initialValue: _searchController.text,
+                    onSubmitted: (v) {
+                      _searchController.text = v;
+                      _onSearch(v);
+                    },
                   ),
                 ),
-                FilledButton.icon(
-                  onPressed: _showCreateDialog,
-                  icon: const Icon(Icons.person_add_outlined),
-                  label: const Text('Add User'),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'Refresh',
+                  icon: const Icon(Icons.refresh_rounded),
+                  onPressed: () => controller.loadUsers(),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-
-            // Filter Bar
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: theme.colorScheme.outlineVariant),
+            const SizedBox(height: 14),
+            if (state.error != null) ...[
+              AdminErrorBanner(
+                state.error!,
+                onRetry: () => controller.loadUsers(),
               ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search by name, email or phone...',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    _onSearch('');
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                        ),
-                        onSubmitted: _onSearch,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Refresh',
-                      icon: const Icon(Icons.refresh),
-                      onPressed: () => ref
-                          .read(usersControllerProvider.notifier)
-                          .loadUsers(),
-                    ),
-                  ],
+              const SizedBox(height: 14),
+            ],
+            if (state.isLoading && page == null)
+              const Padding(
+                padding: EdgeInsets.all(40),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (page == null || page.content.isEmpty)
+              const AdminEmptyState(
+                icon: Icons.people_outline_rounded,
+                title: 'No users found',
+                message: 'Try another search.',
+              )
+            else
+              for (final user in page.content) ...[
+                _UserCard(
+                  user: user,
+                  onOpen: () => _openUser(user),
+                  onSuspend: () => _confirmSuspend(user),
+                  onUnsuspend: () => _confirmUnsuspend(user),
+                  // A deleted account is terminal; only ACTIVE <-> DISABLED
+                  // can be toggled.
+                  onToggleActive:
+                      user.accountStatus == AdminAccountStatus.deleted
+                      ? null
+                      : () => controller.toggleActive(user.id, user.isActive),
                 ),
+                const SizedBox(height: 10),
+              ],
+            if (page != null)
+              AdminPager(
+                page: page.page,
+                totalPages: page.totalPages,
+                totalElements: page.totalElements,
+                onPage: (p) => controller.loadUsers(page: p),
               ),
-            ),
-            const SizedBox(height: 16),
-
-            // Error display
-            if (state.error != null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error_outline, color: theme.colorScheme.error),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        state.error!,
-                        style: TextStyle(color: theme.colorScheme.onErrorContainer),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // Content Table
-            Expanded(
-              child: state.isLoading && state.pageData == null
-                  ? const Center(child: CircularProgressIndicator())
-                  : (state.pageData == null || state.pageData!.content.isEmpty)
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.people_outline,
-                                size: 64,
-                                color: theme.colorScheme.outline,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No users found',
-                                style: theme.textTheme.titleMedium,
-                              ),
-                            ],
-                          ),
-                        )
-                      : Card(
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                              color: theme.colorScheme.outlineVariant,
-                            ),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: ListView.separated(
-                            itemCount: state.pageData!.content.length,
-                            separatorBuilder: (_, _) =>
-                                const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              final user = state.pageData!.content[index];
-                              return ListTile(
-                                onTap: () => _openUser(user),
-                                leading: AdminAvatar(
-                                  url: user.avatarUrl,
-                                  name: user.fullName,
-                                ),
-                                title: Row(
-                                  children: [
-                                    Text(
-                                      user.fullName.isNotEmpty
-                                          ? user.fullName
-                                          : 'Unnamed User',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    if (user.gender != null)
-                                      Chip(
-                                        label: Text(
-                                          user.gender!,
-                                          style: const TextStyle(fontSize: 10),
-                                        ),
-                                        visualDensity: VisualDensity.compact,
-                                        padding: EdgeInsets.zero,
-                                      ),
-                                    if (user.age != null)
-                                      Padding(
-                                        padding: const EdgeInsets.only(left: 6),
-                                        child: Text(
-                                          '${user.age} yrs',
-                                          style: theme.textTheme.bodySmall,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                                subtitle: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.location_on_outlined,
-                                      size: 14,
-                                      color: theme.colorScheme.outline,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      user.lastKnownLocality ?? 'Unknown locality',
-                                    ),
-                                    if (adminSignInIdentifier(email: user.email, phoneNumber: user.phoneNumber) case final id?) ...[
-                                      const SizedBox(width: 12),
-                                      Icon(
-                                        user.email != null ? Icons.mail_outline : Icons.phone_outlined,
-                                        size: 14,
-                                        color: theme.colorScheme.outline,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      SelectableText(id),
-                                    ],
-                                    const SizedBox(width: 12),
-                                    Chip(
-                                      label: Text(
-                                        user.primaryAuthProvider ?? 'AUTH',
-                                        style: const TextStyle(fontSize: 10),
-                                      ),
-                                      visualDensity: VisualDensity.compact,
-                                      padding: EdgeInsets.zero,
-                                    ),
-                                  ],
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (user.isSuspended) ...[
-                                      ActionChip(
-                                        avatar: const Icon(Icons.block, size: 14, color: Colors.white),
-                                        backgroundColor: Colors.red.shade700,
-                                        label: const Text(
-                                          'Suspended',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                        onPressed: () => _confirmUnsuspend(user),
-                                      ),
-                                      const SizedBox(width: 8),
-                                    ] else ...[
-                                      IconButton(
-                                        icon: const Icon(Icons.block_outlined, size: 18, color: Colors.red),
-                                        tooltip: 'Suspend user',
-                                        onPressed: () => _confirmSuspend(user),
-                                      ),
-                                    ],
-                                    _AccountStatusChip(
-                                      status: user.accountStatus,
-                                      // A deleted account is terminal; only
-                                      // ACTIVE <-> DISABLED can be toggled.
-                                      onPressed: user.accountStatus ==
-                                              AdminAccountStatus.deleted
-                                          ? null
-                                          : () => ref
-                                              .read(usersControllerProvider.notifier)
-                                              .toggleActive(user.id, user.isActive),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    IconButton(
-                                      icon: const Icon(Icons.open_in_new),
-                                      tooltip:
-                                          'Open user — photo, details, edit',
-                                      onPressed: () => _openUser(user),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-            ),
-            const SizedBox(height: 12),
-
-            // Pagination Controls
-            if (state.pageData != null && state.pageData!.totalPages > 1)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    'Page ${state.pageData!.page + 1} of ${state.pageData!.totalPages} (${state.pageData!.totalElements} total)',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  const SizedBox(width: 16),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left),
-                    onPressed: state.pageData!.page > 0
-                        ? () => ref
-                            .read(usersControllerProvider.notifier)
-                            .loadUsers(page: state.pageData!.page - 1)
-                        : null,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_right),
-                    onPressed: !state.pageData!.isLast
-                        ? () => ref
-                            .read(usersControllerProvider.notifier)
-                            .loadUsers(page: state.pageData!.page + 1)
-                        : null,
-                  ),
-                ],
-              ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -416,27 +210,134 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
   }
 }
 
-/// ACTIVE / DISABLED / DELETED pill. Pressable only when [onPressed] is set.
-class _AccountStatusChip extends StatelessWidget {
-  const _AccountStatusChip({required this.status, this.onPressed});
+/// One user: photo, name, where they are, how they sign in, account state.
+class _UserCard extends StatelessWidget {
+  const _UserCard({
+    required this.user,
+    required this.onOpen,
+    required this.onSuspend,
+    required this.onUnsuspend,
+    required this.onToggleActive,
+  });
 
-  final AdminAccountStatus status;
-  final VoidCallback? onPressed;
+  final AdminUserSummary user;
+  final VoidCallback onOpen;
+  final VoidCallback onSuspend;
+  final VoidCallback onUnsuspend;
+  final VoidCallback? onToggleActive;
 
   @override
   Widget build(BuildContext context) {
-    final (icon, color) = switch (status) {
-      AdminAccountStatus.active => (Icons.check_circle, Colors.green),
-      AdminAccountStatus.disabled => (Icons.cancel, Colors.red),
-      AdminAccountStatus.deleted => (Icons.delete_forever, Colors.grey),
-    };
-    return ActionChip(
-      avatar: Icon(icon, size: 16, color: color),
-      label: Text(
-        status.label,
-        style: TextStyle(color: color.shade800, fontWeight: FontWeight.w600),
-      ),
-      onPressed: onPressed,
+    final theme = Theme.of(context);
+    final id = adminSignInIdentifier(
+      email: user.email,
+      phoneNumber: user.phoneNumber,
     );
+    final meta = [
+      user.lastKnownLocality ?? 'Unknown locality',
+      ?id,
+    ].join(' · ');
+    return AdminCard(
+      padding: const EdgeInsets.all(12),
+      onTap: onOpen,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AdminAvatar(url: user.avatarUrl, name: user.fullName, radius: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.fullName.isNotEmpty ? user.fullName : 'Unnamed User',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall,
+                ),
+                Text(
+                  meta,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    if (user.isSuspended)
+                      const AdminChip(
+                        'Suspended',
+                        tone: ChipTone.danger,
+                        icon: Icons.block_rounded,
+                      ),
+                    _AccountStatusChip(status: user.accountStatus),
+                    if (user.gender != null)
+                      AdminChip(humanizeEnum(user.gender)),
+                    if (user.age != null) AdminChip('${user.age} yrs'),
+                    AdminChip(
+                      user.primaryAuthProvider ?? 'AUTH',
+                      tone: ChipTone.info,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'User actions',
+            onSelected: (v) => switch (v) {
+              'suspend' => onSuspend(),
+              'unsuspend' => onUnsuspend(),
+              'toggle' => onToggleActive?.call(),
+              _ => onOpen(),
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'open',
+                child: Text('Open user — photo, details, edit'),
+              ),
+              user.isSuspended
+                  ? const PopupMenuItem(
+                      value: 'unsuspend',
+                      child: Text('Lift suspension'),
+                    )
+                  : const PopupMenuItem(
+                      value: 'suspend',
+                      child: Text('Suspend user'),
+                    ),
+              if (onToggleActive != null)
+                PopupMenuItem(
+                  value: 'toggle',
+                  child: Text(
+                    user.isActive ? 'Disable account' : 'Re-activate account',
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ACTIVE / DISABLED / DELETED pill.
+class _AccountStatusChip extends StatelessWidget {
+  const _AccountStatusChip({required this.status});
+
+  final AdminAccountStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, tone) = switch (status) {
+      AdminAccountStatus.active => (Icons.check_circle_rounded, ChipTone.ok),
+      AdminAccountStatus.disabled => (Icons.cancel_rounded, ChipTone.warn),
+      AdminAccountStatus.deleted => (
+        Icons.delete_forever_rounded,
+        ChipTone.neutral,
+      ),
+    };
+    return AdminChip(status.label, tone: tone, icon: icon);
   }
 }

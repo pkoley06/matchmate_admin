@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'admin_ui.dart';
+
 /// Outlined card with a title row, used for each block of a detail screen.
 class AdminSectionCard extends StatelessWidget {
   const AdminSectionCard({
@@ -7,13 +9,13 @@ class AdminSectionCard extends StatelessWidget {
     required this.title,
     required this.child,
     this.trailing,
-    this.padding = const EdgeInsets.all(16),
+    this.padding,
   });
 
   final String title;
   final Widget child;
   final Widget? trailing;
-  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? padding;
 
   @override
   Widget build(BuildContext context) {
@@ -22,12 +24,12 @@ class AdminSectionCard extends StatelessWidget {
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(18),
         side: BorderSide(color: theme.colorScheme.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: padding,
+        padding: padding ?? EdgeInsets.all(context.isPhone ? 14 : 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -37,7 +39,7 @@ class AdminSectionCard extends StatelessWidget {
                   child: Text(
                     title,
                     style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -63,23 +65,29 @@ class AdminInfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final labelText = Text(
+      label,
+      style: theme.textTheme.bodyMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
+    );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurfaceVariant,
+      child: LayoutBuilder(
+        builder: (context, c) => c.maxWidth < 340
+            // Too narrow for two columns: label above value.
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [labelText, SelectableText(value)],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(width: c.maxWidth < 520 ? 120 : 150, child: labelText),
+                  Expanded(child: SelectableText(value)),
+                ],
               ),
-            ),
-          ),
-          Expanded(child: SelectableText(value)),
-        ],
       ),
     );
   }
@@ -168,6 +176,7 @@ Future<bool> confirmAdminAction(
           style: destructive
               ? FilledButton.styleFrom(
                   backgroundColor: Theme.of(ctx).colorScheme.error,
+                  foregroundColor: Colors.white,
                 )
               : null,
           onPressed: () => Navigator.of(ctx).pop(true),

@@ -7,15 +7,13 @@ import '../../../users/data/admin_users_api.dart';
 import '../../../users/domain/admin_user_models.dart';
 
 class UserSelectionDialog extends ConsumerStatefulWidget {
-  const UserSelectionDialog({
-    super.key,
-    required this.initiallySelected,
-  });
+  const UserSelectionDialog({super.key, required this.initiallySelected});
 
   final List<AdminUserSummary> initiallySelected;
 
   @override
-  ConsumerState<UserSelectionDialog> createState() => _UserSelectionDialogState();
+  ConsumerState<UserSelectionDialog> createState() =>
+      _UserSelectionDialogState();
 }
 
 class _UserSelectionDialogState extends ConsumerState<UserSelectionDialog> {
@@ -49,7 +47,9 @@ class _UserSelectionDialogState extends ConsumerState<UserSelectionDialog> {
     });
 
     try {
-      final page = await ref.read(adminUsersApiProvider).getUsers(
+      final page = await ref
+          .read(adminUsersApiProvider)
+          .getUsers(
             search: query?.trim().isEmpty == true ? null : query?.trim(),
             size: 50,
           );
@@ -91,14 +91,25 @@ class _UserSelectionDialogState extends ConsumerState<UserSelectionDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final size = MediaQuery.sizeOf(context);
+    final phone = size.width < 720;
 
     return AlertDialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: phone ? 12 : 40,
+        vertical: 24,
+      ),
+      contentPadding: EdgeInsets.fromLTRB(
+        phone ? 14 : 24,
+        16,
+        phone ? 14 : 24,
+        0,
+      ),
       title: Row(
         children: [
           const Icon(Icons.person_search_outlined),
           const SizedBox(width: 8),
-          const Text('Select Recipients'),
-          const Spacer(),
+          const Expanded(child: Text('Select Recipients')),
           Text(
             '${_selected.length} selected',
             style: theme.textTheme.labelMedium?.copyWith(
@@ -110,7 +121,7 @@ class _UserSelectionDialogState extends ConsumerState<UserSelectionDialog> {
       ),
       content: SizedBox(
         width: 560,
-        height: 520,
+        height: (size.height * 0.62).clamp(280.0, 520.0),
         child: Column(
           children: [
             TextField(
@@ -133,7 +144,9 @@ class _UserSelectionDialogState extends ConsumerState<UserSelectionDialog> {
               onChanged: _onSearchChanged,
             ),
             const SizedBox(height: 8),
-            Row(
+            Wrap(
+              spacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 TextButton.icon(
                   onPressed: _users.isEmpty ? null : _selectAllVisible,
@@ -145,7 +158,6 @@ class _UserSelectionDialogState extends ConsumerState<UserSelectionDialog> {
                   icon: const Icon(Icons.deselect, size: 16),
                   label: const Text('Clear All'),
                 ),
-                const Spacer(),
                 if (_loading)
                   const SizedBox(
                     width: 14,
@@ -159,57 +171,55 @@ class _UserSelectionDialogState extends ConsumerState<UserSelectionDialog> {
               child: _error != null
                   ? Center(child: Text('Error loading users: $_error'))
                   : _loading && _users.isEmpty
-                      ? const Center(child: CircularProgressIndicator())
-                      : _users.isEmpty
-                          ? const Center(child: Text('No users found'))
-                          : ListView.builder(
-                              itemCount: _users.length,
-                              itemBuilder: (ctx, i) {
-                                final user = _users[i];
-                                final isSelected = _selected.containsKey(user.id);
-                                return CheckboxListTile(
-                                  value: isSelected,
-                                  onChanged: (val) {
-                                    setState(() {
-                                      if (val == true) {
-                                        _selected[user.id] = user;
-                                      } else {
-                                        _selected.remove(user.id);
-                                      }
-                                    });
-                                  },
-                                  secondary: CircleAvatar(
-                                    backgroundImage: user.avatarUrl != null &&
-                                            user.avatarUrl!.isNotEmpty
-                                        ? NetworkImage(user.avatarUrl!)
-                                        : null,
-                                    child: user.avatarUrl == null ||
-                                            user.avatarUrl!.isEmpty
-                                        ? Text(
-                                            user.fullName.isNotEmpty
-                                                ? user.fullName[0].toUpperCase()
-                                                : '?',
-                                          )
-                                        : null,
-                                  ),
-                                  title: Text(
-                                    user.fullName.isEmpty
-                                        ? 'Unnamed User'
-                                        : user.fullName,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    user.lastKnownLocality ??
-                                        (user.isActive
-                                            ? 'Active'
-                                            : 'Inactive'),
-                                  ),
-                                  dense: true,
-                                );
-                              },
-                            ),
+                  ? const Center(child: CircularProgressIndicator())
+                  : _users.isEmpty
+                  ? const Center(child: Text('No users found'))
+                  : ListView.builder(
+                      itemCount: _users.length,
+                      itemBuilder: (ctx, i) {
+                        final user = _users[i];
+                        final isSelected = _selected.containsKey(user.id);
+                        return CheckboxListTile(
+                          value: isSelected,
+                          onChanged: (val) {
+                            setState(() {
+                              if (val == true) {
+                                _selected[user.id] = user;
+                              } else {
+                                _selected.remove(user.id);
+                              }
+                            });
+                          },
+                          secondary: CircleAvatar(
+                            backgroundImage:
+                                user.avatarUrl != null &&
+                                    user.avatarUrl!.isNotEmpty
+                                ? NetworkImage(user.avatarUrl!)
+                                : null,
+                            child:
+                                user.avatarUrl == null ||
+                                    user.avatarUrl!.isEmpty
+                                ? Text(
+                                    user.fullName.isNotEmpty
+                                        ? user.fullName[0].toUpperCase()
+                                        : '?',
+                                  )
+                                : null,
+                          ),
+                          title: Text(
+                            user.fullName.isEmpty
+                                ? 'Unnamed User'
+                                : user.fullName,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            user.lastKnownLocality ??
+                                (user.isActive ? 'Active' : 'Inactive'),
+                          ),
+                          dense: true,
+                        );
+                      },
+                    ),
             ),
           ],
         ),

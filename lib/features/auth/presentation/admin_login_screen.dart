@@ -49,7 +49,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
 
     final form = Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.symmetric(horizontal: wide ? 32 : 20, vertical: 32),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 400),
           child: Form(
@@ -59,13 +59,23 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (!wide) ...[
-                  const Center(child: BrandLogo(height: 44)),
-                  const SizedBox(height: 40),
+                  const Center(
+                    child: BrandLogo(height: 48, showAdminTag: true),
+                  ),
+                  const SizedBox(height: 36),
                 ],
-                Text('Welcome back', style: theme.textTheme.headlineMedium),
+                Text(
+                  'Welcome back',
+                  style:
+                      (wide
+                              ? theme.textTheme.headlineMedium
+                              : theme.textTheme.headlineSmall)
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                ),
                 const SizedBox(height: 6),
                 Text(
-                  'Sign in to manage users, rooms and moderation.',
+                  'Sign in to MateEazy Admin to manage users, rooms, the '
+                  'community and reports.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -138,7 +148,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: BrandColors.plum,
                           ),
                         )
                       : const Text('Sign in'),
@@ -208,10 +218,14 @@ class _BrandPanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const BrandLogo(height: 44, textColor: BrandColors.creamText),
+                const BrandLogo(
+                  height: 48,
+                  showAdminTag: true,
+                  textColor: BrandColors.creamText,
+                ),
                 const Spacer(),
                 Text(
-                  'Two doors,\none home.',
+                  'Keep MateEazy\nfriendly and safe.',
                   style: theme.textTheme.displaySmall?.copyWith(
                     color: BrandColors.creamText,
                     fontWeight: FontWeight.w700,
@@ -220,10 +234,10 @@ class _BrandPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'The MateEazy admin console keeps rooms, roommates and the '
-                  'community safe.',
+                  'Review reports, look after rooms and roommates, and keep '
+                  'the community kind.',
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: BrandColors.mutedDark,
+                    color: BrandColors.navText,
                     height: 1.6,
                   ),
                 ),
@@ -231,7 +245,7 @@ class _BrandPanel extends StatelessWidget {
                 Text(
                   '© ${DateTime.now().year} MateEazy',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: BrandColors.mutedDark,
+                    color: BrandColors.navLabel,
                   ),
                 ),
               ],

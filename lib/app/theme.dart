@@ -16,9 +16,27 @@ abstract final class BrandColors {
   static const cream = Color(0xFFFBF6F1);
   static const creamDeep = Color(0xFFF3EAE0);
   static const line = Color(0xFFE9DED3);
-  static const muted = Color(0xFF7D7088);
+  /// Secondary text on cream/white; dark enough for small text (WCAG AA).
+  static const muted = Color(0xFF6B5E77);
   static const mutedDark = Color(0xFFC1B0CC);
   static const creamText = Color(0xFFFFF8F0);
+
+  /// Link / text-button colour on light surfaces (coral is too light for text).
+  static const coralInk = Color(0xFFB23A2A);
+
+  /// Sidebar text and section labels on plum.
+  static const navText = Color(0xFFE9DDF0);
+  static const navLabel = Color(0xFFB9A6C6);
+
+  // Soft status tints for chips (background / text).
+  static const okBg = Color(0xFFE3F4EA);
+  static const okInk = Color(0xFF1F7A50);
+  static const warnBg = Color(0xFFFFF1D6);
+  static const warnInk = Color(0xFF7A4E00);
+  static const dangerBg = Color(0xFFFDE4E0);
+  static const dangerInk = Color(0xFF9A2E1F);
+  static const infoBg = Color(0xFFEDE6F3);
+  static const infoInk = Color(0xFF4B3463);
 }
 
 abstract final class AppTheme {
@@ -137,9 +155,10 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: scheme.primary,
-          foregroundColor: Colors.white,
-          minimumSize: const Size(0, 46),
+          backgroundColor: BrandColors.coral,
+          foregroundColor: BrandColors.plum,
+          disabledBackgroundColor: fill,
+          minimumSize: const Size(0, 44),
           padding: const EdgeInsets.symmetric(horizontal: 22),
           shape: RoundedRectangleBorder(borderRadius: radius),
           textStyle: textTheme.labelLarge,
@@ -147,7 +166,7 @@ abstract final class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          minimumSize: const Size(0, 46),
+          minimumSize: const Size(0, 44),
           shape: RoundedRectangleBorder(borderRadius: radius),
           textStyle: textTheme.labelLarge,
         ),
@@ -155,7 +174,8 @@ abstract final class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: ink,
-          minimumSize: const Size(0, 46),
+          backgroundColor: surface,
+          minimumSize: const Size(0, 44),
           side: BorderSide(color: line),
           shape: RoundedRectangleBorder(borderRadius: radius),
           textStyle: textTheme.labelLarge,
@@ -163,7 +183,7 @@ abstract final class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: scheme.primary,
+          foregroundColor: isDark ? BrandColors.coral : BrandColors.coralInk,
           shape: RoundedRectangleBorder(borderRadius: radius),
           textStyle: textTheme.labelLarge,
         ),
@@ -207,9 +227,10 @@ abstract final class AppTheme {
         dividerThickness: 1,
       ),
       tabBarTheme: TabBarThemeData(
-        labelColor: scheme.primary,
+        labelColor: ink,
         unselectedLabelColor: muted,
-        indicatorColor: scheme.primary,
+        indicatorColor: BrandColors.coral,
+        indicatorSize: TabBarIndicatorSize.label,
         dividerColor: line,
         labelStyle: textTheme.labelLarge,
       ),

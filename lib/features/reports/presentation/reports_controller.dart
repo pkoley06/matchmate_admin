@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/admin_reports_repository.dart';
+import '../../dashboard/presentation/dashboard_providers.dart';
 import '../domain/admin_report_models.dart';
 
 class ReportsState {
@@ -69,6 +70,8 @@ class ReportsController extends Notifier<ReportsState> {
       totalPages: 0,
       page: 0,
       isLast: true,
+      // Open reports first: that is what needs a decision.
+      statusFilter: 'PENDING',
       isLoading: true,
     );
   }
@@ -116,6 +119,7 @@ class ReportsController extends Notifier<ReportsState> {
         reportId,
         AdminReportResolveRequest(action: action, notes: notes),
       );
+      ref.invalidate(dashboardStatsProvider);
       await loadReports(page: state.page);
       return true;
     } catch (e) {

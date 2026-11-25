@@ -6,6 +6,9 @@ import '../../../app/router.dart';
 import '../../../core/uploads/admin_upload_api.dart';
 import '../../../core/widgets/admin_detail_widgets.dart';
 import '../../../core/widgets/admin_image.dart';
+import '../../../core/widgets/admin_ui.dart';
+import '../../community/presentation/community_providers.dart';
+import '../../community/presentation/widgets/user_community_card.dart';
 import '../../rooms/data/admin_rooms_repository.dart';
 import '../../rooms/domain/admin_room_models.dart';
 import '../../rooms/presentation/room_form_dialog.dart';
@@ -282,92 +285,49 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final user = _user;
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeader(context, user),
-            const SizedBox(height: 16),
-            Expanded(
-              child: user == null
-                  ? Center(
-                      child: _loading
-                          ? const CircularProgressIndicator()
-                          : AdminErrorBanner(
-                              _error ?? 'User not found',
-                              onRetry: _load,
-                            ),
-                    )
-                  : _buildBody(context, user),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, AdminUserDetail? user) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        IconButton(
-          tooltip: 'Back to users',
-          icon: const Icon(Icons.arrow_back),
-          onPressed: _back,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                user == null
-                    ? 'User details'
-                    : (user.fullName.isNotEmpty
-                          ? user.fullName
-                          : 'Unnamed User'),
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (user != null)
-                Text(
-                  [
-                    if (user.age != null) '${user.age} yrs',
-                    if (user.gender != null) humanizeEnum(user.gender),
-                    if (user.lastKnownLocality?.isNotEmpty == true)
-                      user.lastKnownLocality!,
-                  ].join(' • '),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-            ],
-          ),
-        ),
+    return AdminPage(
+      breadcrumb: 'Users',
+      onBack: _back,
+      title: user == null
+          ? 'User details'
+          : (user.fullName.isNotEmpty ? user.fullName : 'Unnamed User'),
+      subtitle: user == null
+          ? null
+          : [
+              if (user.age != null) '${user.age} yrs',
+              if (user.gender != null) humanizeEnum(user.gender),
+              if (user.lastKnownLocality?.isNotEmpty == true)
+                user.lastKnownLocality!,
+            ].join(' · '),
+      scrollable: false,
+      actions: [
         if (user != null) ...[
-          IconButton(
-            tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh),
+          OutlinedButton.icon(
             onPressed: _loading
                 ? null
                 : () {
                     _load();
                     _loadRooms();
+                    ref.invalidate(userPostsProvider(widget.userId));
+                    ref.invalidate(userStatusesProvider(widget.userId));
                   },
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Refresh'),
           ),
-          const SizedBox(width: 8),
           FilledButton.icon(
             onPressed: _busy ? null : _edit,
-            icon: const Icon(Icons.edit_outlined),
+            icon: const Icon(Icons.edit_outlined, size: 18),
             label: const Text('Edit profile'),
           ),
         ],
       ],
+      child: user == null
+          ? Center(
+              child: _loading
+                  ? const CircularProgressIndicator()
+                  : AdminErrorBanner(_error ?? 'User not found', onRetry: _load),
+            )
+          : _buildBody(context, user),
     );
   }
 
@@ -377,6 +337,7 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
     final lifestyle = _buildLifestyleCard(user);
     final account = _buildAccountCard(context, user);
     final rooms = _buildRoomsCard(context);
+    final community = UserCommunityCard(userId: widget.userId);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -392,6 +353,9 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
               account,
               const SizedBox(height: 16),
               rooms,
+              const SizedBox(height: 16),
+              community,
+              const SizedBox(height: 24),
             ],
           );
         }
@@ -414,7 +378,14 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
             Expanded(
               flex: 2,
               child: ListView(
-                children: [account, const SizedBox(height: 16), rooms],
+                children: [
+                  account,
+                  const SizedBox(height: 16),
+                  rooms,
+                  const SizedBox(height: 16),
+                  community,
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
           ],

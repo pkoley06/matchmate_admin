@@ -1,9 +1,9 @@
 {
     "name": "MateEazy Admin",
-    "short_name": "MateEazy",
+    "short_name": "MateEazy Admin",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#2B1B3D",
+    "background_color": "#FBF6F1",
     "theme_color": "#2B1B3D",
     "description": "MateEazy admin console",
     "orientation": "any",

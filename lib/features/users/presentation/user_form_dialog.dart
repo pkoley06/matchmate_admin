@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/uploads/admin_upload_api.dart';
 import '../../../core/widgets/admin_image.dart';
+import '../../../core/widgets/admin_ui.dart';
 import '../data/admin_users_repository.dart';
 import '../domain/admin_user_models.dart';
 
@@ -243,7 +244,18 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     final busy = _saving || _uploading;
     final hasPhoto = isImageUrl(_avatarUrl);
 
+    final phone = context.isPhone;
     return AlertDialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: phone ? 12 : 40,
+        vertical: 24,
+      ),
+      contentPadding: EdgeInsets.fromLTRB(
+        phone ? 16 : 24,
+        16,
+        phone ? 16 : 24,
+        0,
+      ),
       title: Text(_isEdit ? 'Edit User' : 'Add User'),
       content: SizedBox(
         width: 560,
@@ -329,7 +341,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   validator: _required,
                 ),
                 const SizedBox(height: 8),
-                Row(
+                _FieldPair(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
@@ -368,7 +380,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                Row(
+                _FieldPair(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
@@ -412,7 +424,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Row(
+                _FieldPair(
                   children: [
                     Expanded(
                       child: _dropdown(
@@ -434,7 +446,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                Row(
+                _FieldPair(
                   children: [
                     Expanded(
                       child: _dropdown(
@@ -450,8 +462,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                         label: 'Cleanliness',
                         options: _cleanliness,
                         value: _cleanlinessLevel,
-                        onChanged: (v) =>
-                            setState(() => _cleanlinessLevel = v),
+                        onChanged: (v) => setState(() => _cleanlinessLevel = v),
                       ),
                     ),
                   ],
@@ -513,6 +524,37 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
           DropdownMenuItem<String?>(value: entry.key, child: Text(entry.value)),
       ],
       onChanged: onChanged,
+    );
+  }
+}
+
+/// Two form fields side by side; stacked on a phone, where a dialog is too
+/// narrow for both.
+class _FieldPair extends StatelessWidget {
+  const _FieldPair({
+    required this.children,
+    this.crossAxisAlignment = CrossAxisAlignment.center,
+  });
+
+  final List<Widget> children;
+  final CrossAxisAlignment crossAxisAlignment;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!context.isPhone) {
+      return Row(crossAxisAlignment: crossAxisAlignment, children: children);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final c in children)
+          if (c is Expanded)
+            c.child
+          else if (c is SizedBox && c.width != null && c.height == null)
+            const SizedBox(height: 12)
+          else
+            c,
+      ],
     );
   }
 }

@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/router.dart';
+import '../../../app/theme.dart';
 import '../../../core/widgets/admin_detail_widgets.dart';
 import '../../../core/widgets/admin_image.dart';
+import '../../../core/widgets/admin_ui.dart';
 import '../../comments/presentation/room_comments_panel.dart';
 import '../data/admin_rooms_repository.dart';
 import '../domain/admin_room_models.dart';
@@ -59,18 +61,14 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
     }
   }
 
-  void _back() =>
-      context.canPop() ? context.pop() : context.go(Routes.rooms);
+  void _back() => context.canPop() ? context.pop() : context.go(Routes.rooms);
 
   /// Keeps the rooms list in step with what was changed here.
-  void _refreshList() =>
-      ref.read(roomsControllerProvider.notifier).loadRooms();
+  void _refreshList() => ref.read(roomsControllerProvider.notifier).loadRooms();
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showAdminSnack(context, message);
   }
 
   Future<void> _edit() async {
@@ -135,76 +133,31 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final room = _room;
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeader(context, room),
-            const SizedBox(height: 16),
-            Expanded(
-              child: room == null
-                  ? Center(
-                      child: _loading
-                          ? const CircularProgressIndicator()
-                          : AdminErrorBanner(
-                              _error ?? 'Listing not found',
-                              onRetry: _load,
-                            ),
-                    )
-                  : _buildBody(context, room),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, AdminRoomDetail? room) {
     final theme = Theme.of(context);
-    return Row(
-      children: [
-        IconButton(
-          tooltip: 'Back to rooms',
-          icon: const Icon(Icons.arrow_back),
-          onPressed: _back,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                room == null
-                    ? 'Room details'
-                    : (room.title.isNotEmpty ? room.title : 'Untitled Listing'),
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (room != null)
-                Text(
-                  [
-                    if (room.placeLabel.isNotEmpty) room.placeLabel,
-                    '₹${room.rentAmount ?? 0} / month',
-                  ].join(' • '),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-            ],
-          ),
-        ),
+    return AdminPage(
+      breadcrumb: 'Rooms',
+      onBack: _back,
+      scrollable: false,
+      title: room == null
+          ? 'Room details'
+          : (room.title.isNotEmpty ? room.title : 'Untitled Listing'),
+      subtitle: room == null
+          ? null
+          : [
+              if (room.placeLabel.isNotEmpty) room.placeLabel,
+              '₹${room.rentAmount ?? 0} / month',
+            ].join(' · '),
+      actions: [
         if (room != null) ...[
-          const SizedBox(width: 12),
           ActionChip(
             avatar: Icon(
-              room.isAvailable ? Icons.check_circle : Icons.unpublished,
+              room.isAvailable
+                  ? Icons.check_circle_rounded
+                  : Icons.unpublished_rounded,
               size: 16,
-              color: room.isAvailable ? Colors.green : Colors.grey,
+              color: room.isAvailable
+                  ? BrandColors.okInk
+                  : theme.colorScheme.onSurfaceVariant,
             ),
             label: Text(room.isAvailable ? 'Available' : 'Delisted'),
             tooltip: room.isAvailable
@@ -212,29 +165,36 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
                 : 'Make this room available',
             onPressed: _busy ? null : _toggleAvailable,
           ),
-          const SizedBox(width: 8),
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: _loading ? null : _load,
           ),
-          const SizedBox(width: 8),
           OutlinedButton.icon(
             onPressed: _busy ? null : _delete,
-            icon: const Icon(Icons.delete_outline),
+            icon: const Icon(Icons.delete_outline, size: 18),
             label: const Text('Delete'),
             style: OutlinedButton.styleFrom(
               foregroundColor: theme.colorScheme.error,
             ),
           ),
-          const SizedBox(width: 8),
           FilledButton.icon(
             onPressed: _busy ? null : _edit,
-            icon: const Icon(Icons.edit_outlined),
+            icon: const Icon(Icons.edit_outlined, size: 18),
             label: const Text('Edit'),
           ),
         ],
       ],
+      child: room == null
+          ? Center(
+              child: _loading
+                  ? const CircularProgressIndicator()
+                  : AdminErrorBanner(
+                      _error ?? 'Listing not found',
+                      onRetry: _load,
+                    ),
+            )
+          : _buildBody(context, room),
     );
   }
 
@@ -267,6 +227,7 @@ class _RoomDetailScreenState extends ConsumerState<RoomDetailScreen> {
       builder: (context, constraints) {
         if (constraints.maxWidth < 1000) {
           return ListView(
+            padding: const EdgeInsets.only(bottom: 24),
             children: [
               photos,
               const SizedBox(height: 16),
@@ -352,7 +313,7 @@ class _PhotoGallery extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: SizedBox(
-              height: 340,
+              height: context.isPhone ? 220 : 340,
               child: InkWell(
                 onTap: () =>
                     showImageViewer(context, urls, initialIndex: index),
@@ -460,24 +421,35 @@ class _HostCard extends StatelessWidget {
         : 'Unknown host';
     return AdminSectionCard(
       title: 'Host',
-      child: Row(
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          AdminAvatar(url: room.hostAvatarUrl, name: name, radius: 26),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                Text(
-                  'User ${room.hostUserId}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                  overflow: TextOverflow.ellipsis,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AdminAvatar(url: room.hostAvatarUrl, name: name, radius: 26),
+              const SizedBox(width: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 220),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      'User ${room.hostUserId}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
           OutlinedButton.icon(
             onPressed: room.hostUserId.isEmpty
                 ? null

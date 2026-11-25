@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/admin_places_service.dart';
 import '../../../core/uploads/admin_upload_api.dart';
 import '../../../core/widgets/admin_image.dart';
+import '../../../core/widgets/admin_ui.dart';
 import '../../users/data/admin_users_repository.dart';
 import '../../users/domain/admin_user_models.dart';
 import '../data/admin_rooms_repository.dart';
@@ -263,9 +264,8 @@ class _RoomFormDialogState extends ConsumerState<RoomFormDialog> {
       setState(() => _photoUrls = _photoUrls.where((u) => u != url).toList());
 
   /// The first photo is the cover the app shows on cards.
-  void _makeCover(String url) => setState(
-    () => _photoUrls = [url, ..._photoUrls.where((u) => u != url)],
-  );
+  void _makeCover(String url) =>
+      setState(() => _photoUrls = [url, ..._photoUrls.where((u) => u != url)]);
 
   List<String> get _amenities => _amenitiesController.text
       .split(',')
@@ -282,9 +282,7 @@ class _RoomFormDialogState extends ConsumerState<RoomFormDialog> {
       return;
     }
     if (latitude == null || longitude == null) {
-      setState(
-        () => _error = 'Pick a place so the listing has coordinates.',
-      );
+      setState(() => _error = 'Pick a place so the listing has coordinates.');
       return;
     }
     final moveIn = _moveInController.text.trim();
@@ -370,7 +368,18 @@ class _RoomFormDialogState extends ConsumerState<RoomFormDialog> {
     final theme = Theme.of(context);
     final busy = _saving || _uploading;
 
+    final phone = context.isPhone;
     return AlertDialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: phone ? 12 : 40,
+        vertical: 24,
+      ),
+      contentPadding: EdgeInsets.fromLTRB(
+        phone ? 16 : 24,
+        16,
+        phone ? 16 : 24,
+        0,
+      ),
       title: Row(
         children: [
           Icon(
@@ -378,7 +387,9 @@ class _RoomFormDialogState extends ConsumerState<RoomFormDialog> {
             color: _coral,
           ),
           const SizedBox(width: 8),
-          Text(_isEdit ? 'Edit Room Listing' : 'Add Room Listing'),
+          Flexible(
+            child: Text(_isEdit ? 'Edit Room Listing' : 'Add Room Listing'),
+          ),
         ],
       ),
       content: SizedBox(
@@ -425,7 +436,7 @@ class _RoomFormDialogState extends ConsumerState<RoomFormDialog> {
                 ),
                 const SizedBox(height: 14),
 
-                Row(
+                _FieldPair(
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
@@ -482,7 +493,7 @@ class _RoomFormDialogState extends ConsumerState<RoomFormDialog> {
                 ),
                 const SizedBox(height: 14),
 
-                Row(
+                _FieldPair(
                   children: [
                     Expanded(
                       child: TextFormField(
@@ -513,7 +524,7 @@ class _RoomFormDialogState extends ConsumerState<RoomFormDialog> {
                 ),
                 const SizedBox(height: 14),
 
-                Row(
+                _FieldPair(
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
@@ -570,7 +581,7 @@ class _RoomFormDialogState extends ConsumerState<RoomFormDialog> {
                 ),
                 const SizedBox(height: 14),
 
-                Row(
+                _FieldPair(
                   children: [
                     Expanded(
                       child: TextFormField(
@@ -856,7 +867,7 @@ class _RoomFormDialogState extends ConsumerState<RoomFormDialog> {
         ),
       ),
       const SizedBox(height: 12),
-      Row(
+      _FieldPair(
         children: [
           Expanded(
             child: TextFormField(
@@ -883,7 +894,7 @@ class _RoomFormDialogState extends ConsumerState<RoomFormDialog> {
         ],
       ),
       const SizedBox(height: 12),
-      Row(
+      _FieldPair(
         children: [
           Expanded(
             child: TextFormField(
@@ -908,7 +919,7 @@ class _RoomFormDialogState extends ConsumerState<RoomFormDialog> {
         ],
       ),
       const SizedBox(height: 12),
-      Row(
+      _FieldPair(
         children: [
           Expanded(
             child: TextFormField(
@@ -1045,6 +1056,33 @@ class _TileButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Two form fields side by side; stacked on a phone, where a dialog is too
+/// narrow for both.
+class _FieldPair extends StatelessWidget {
+  const _FieldPair({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!context.isPhone) {
+      return Row(children: children);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final c in children)
+          if (c is Expanded)
+            c.child
+          else if (c is SizedBox && c.width != null && c.height == null)
+            const SizedBox(height: 12)
+          else
+            c,
+      ],
     );
   }
 }

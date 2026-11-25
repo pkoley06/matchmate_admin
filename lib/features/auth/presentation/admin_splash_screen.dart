@@ -14,7 +14,18 @@ class AdminSplashScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            BrandLogo(height: 56, textColor: BrandColors.creamText),
+            // Scales down rather than clipping on a very narrow phone.
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: BrandLogo(
+                  height: 56,
+                  showAdminTag: true,
+                  textColor: BrandColors.creamText,
+                ),
+              ),
+            ),
             SizedBox(height: 32),
             SizedBox(
               width: 22,

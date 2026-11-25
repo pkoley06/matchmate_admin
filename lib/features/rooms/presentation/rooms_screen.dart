@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/router.dart';
+import '../../../core/widgets/admin_detail_widgets.dart';
 import '../../../core/widgets/admin_image.dart';
+import '../../../core/widgets/admin_ui.dart';
 import '../domain/admin_room_models.dart';
 import 'room_form_dialog.dart';
 import 'rooms_controller.dart';
@@ -25,7 +27,9 @@ class _RoomsScreenState extends ConsumerState<RoomsScreen> {
   }
 
   void _onSearch(String val) {
-    ref.read(roomsControllerProvider.notifier).loadRooms(search: val.trim(), page: 0);
+    ref
+        .read(roomsControllerProvider.notifier)
+        .loadRooms(search: val.trim(), page: 0);
   }
 
   /// Creates a listing, then opens its page.
@@ -33,9 +37,7 @@ class _RoomsScreenState extends ConsumerState<RoomsScreen> {
     final created = await RoomFormDialog.show(context);
     if (created == null || !mounted) return;
     ref.read(roomsControllerProvider.notifier).loadRooms(page: 0);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Listing created successfully')),
-    );
+    showAdminSnack(context, 'Listing created successfully');
     context.go(Routes.room(created.id));
   }
 
@@ -46,7 +48,9 @@ class _RoomsScreenState extends ConsumerState<RoomsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Listing'),
-        content: Text('Are you sure you want to permanently delete "${room.title}"?'),
+        content: Text(
+          'Are you sure you want to permanently delete "${room.title}"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -55,6 +59,7 @@ class _RoomsScreenState extends ConsumerState<RoomsScreen> {
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Colors.white,
             ),
             onPressed: () async {
               Navigator.of(ctx).pop();
@@ -72,343 +77,226 @@ class _RoomsScreenState extends ConsumerState<RoomsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(roomsControllerProvider);
-    final theme = Theme.of(context);
+    final controller = ref.read(roomsControllerProvider.notifier);
+    final page = state.pageData;
 
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return AdminPage(
+      title: 'Rooms',
+      subtitle: 'Every room and roommate listing in the app',
+      scrollable: false,
+      actions: [
+        FilledButton.icon(
+          onPressed: _showAddDialog,
+          icon: const Icon(Icons.add_home_outlined, size: 18),
+          label: const Text('Add Listing'),
+        ),
+      ],
+      child: RefreshIndicator(
+        onRefresh: () => controller.loadRooms(),
+        child: ListView(
           children: [
-            // Header
             Row(
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Room / Listing Management',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Manage, moderate, and inspect flat and room listings',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                  child: AdminSearchField(
+                    hint: 'Search by title, locality or city',
+                    initialValue: _searchController.text,
+                    onSubmitted: (v) {
+                      _searchController.text = v;
+                      _onSearch(v);
+                    },
                   ),
                 ),
-                FilledButton.icon(
-                  onPressed: _showAddDialog,
-                  icon: const Icon(Icons.add_home_outlined),
-                  label: const Text('Add Listing'),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'Refresh',
+                  icon: const Icon(Icons.refresh_rounded),
+                  onPressed: () => controller.loadRooms(),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-
-            // Filter Bar
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: theme.colorScheme.outlineVariant),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search by title, locality, or city...',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    _onSearch('');
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                        ),
-                        onSubmitted: _onSearch,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    SegmentedButton<bool?>(
-                      segments: const [
-                        ButtonSegment(value: null, label: Text('All')),
-                        ButtonSegment(value: true, label: Text('Available')),
-                        ButtonSegment(value: false, label: Text('Delisted')),
-                      ],
-                      selected: {state.availableFilter},
-                      onSelectionChanged: (val) {
-                        ref
-                            .read(roomsControllerProvider.notifier)
-                            .loadRooms(available: val.first, page: 0);
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      tooltip: 'Refresh',
-                      icon: const Icon(Icons.refresh),
-                      onPressed: () => ref
-                          .read(roomsControllerProvider.notifier)
-                          .loadRooms(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Error display
-            if (state.error != null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error_outline, color: theme.colorScheme.error),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        state.error!,
-                        style: TextStyle(color: theme.colorScheme.onErrorContainer),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // Content Table
-            Expanded(
-              child: state.isLoading && state.pageData == null
-                  ? const Center(child: CircularProgressIndicator())
-                  : (state.pageData == null || state.pageData!.content.isEmpty)
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.home_work_outlined,
-                                size: 64,
-                                color: theme.colorScheme.outline,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No listings found',
-                                style: theme.textTheme.titleMedium,
-                              ),
-                            ],
-                          ),
-                        )
-                      : Card(
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                              color: theme.colorScheme.outlineVariant,
-                            ),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: ListView.separated(
-                            itemCount: state.pageData!.content.length,
-                            separatorBuilder: (_, _) =>
-                                const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              final room = state.pageData!.content[index];
-                              return ListTile(
-                                onTap: () => _openRoom(room),
-                                leading: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: AdminNetworkImage(
-                                    url: room.photoUrls.isEmpty
-                                        ? null
-                                        : room.photoUrls.first,
-                                    width: 64,
-                                    height: 48,
-                                    fallbackIcon:
-                                        room.listingType == 'NEED_ROOM'
-                                        ? Icons.person_search_outlined
-                                        : Icons.apartment_outlined,
-                                  ),
-                                ),
-                                title: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        room.title.isNotEmpty
-                                            ? room.title
-                                            : 'Untitled Listing',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '₹${room.rentAmount ?? 0} / mo',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: theme.colorScheme.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                subtitle: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.place_outlined,
-                                      size: 14,
-                                      color: theme.colorScheme.outline,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      room.placeLabel.isNotEmpty
-                                          ? room.placeLabel
-                                          : 'Location pending',
-                                    ),
-                                    const SizedBox(width: 12),
-                                    if (room.roomType != null)
-                                      Chip(
-                                        label: Text(
-                                          room.roomType!,
-                                          style: const TextStyle(fontSize: 10),
-                                        ),
-                                        visualDensity: VisualDensity.compact,
-                                        padding: EdgeInsets.zero,
-                                      ),
-                                    const SizedBox(width: 6),
-                                    Chip(
-                                      avatar: Icon(
-                                        room.genderPreference.isOpenToAll
-                                            ? Icons.groups_outlined
-                                            : Icons.person_outline,
-                                        size: 12,
-                                      ),
-                                      label: Text(
-                                        room.genderPreference.label,
-                                        style: const TextStyle(fontSize: 10),
-                                      ),
-                                      visualDensity: VisualDensity.compact,
-                                      padding: EdgeInsets.zero,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    AdminAvatar(
-                                      url: room.hostAvatarUrl,
-                                      name: room.hostUserName ?? '?',
-                                      radius: 9,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text(
-                                        room.hostUserName ?? 'Unknown host',
-                                        style: theme.textTheme.bodySmall,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    ActionChip(
-                                      avatar: Icon(
-                                        room.isAvailable
-                                            ? Icons.check_circle
-                                            : Icons.unpublished,
-                                        size: 16,
-                                        color: room.isAvailable
-                                            ? Colors.green
-                                            : Colors.grey,
-                                      ),
-                                      label: Text(
-                                        room.isAvailable
-                                            ? 'Available'
-                                            : 'Delisted',
-                                        style: TextStyle(
-                                          color: room.isAvailable
-                                              ? Colors.green.shade800
-                                              : Colors.grey.shade800,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      onPressed: () => ref
-                                          .read(roomsControllerProvider.notifier)
-                                          .toggleAvailability(
-                                            room.id,
-                                            room.isAvailable,
-                                          ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    IconButton(
-                                      icon: const Icon(Icons.open_in_new),
-                                      tooltip:
-                                          'Open room — photos, comments, edit',
-                                      onPressed: () => _openRoom(room),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete_outline,
-                                        color: Colors.red,
-                                      ),
-                                      tooltip: 'Delete listing',
-                                      onPressed: () => _confirmDelete(room),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-            ),
             const SizedBox(height: 12),
-
-            // Pagination Controls
-            if (state.pageData != null && state.pageData!.totalPages > 1)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    'Page ${state.pageData!.page + 1} of ${state.pageData!.totalPages} (${state.pageData!.totalElements} total)',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  const SizedBox(width: 16),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left),
-                    onPressed: state.pageData!.page > 0
-                        ? () => ref
-                            .read(roomsControllerProvider.notifier)
-                            .loadRooms(page: state.pageData!.page - 1)
-                        : null,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_right),
-                    onPressed: !state.pageData!.isLast
-                        ? () => ref
-                            .read(roomsControllerProvider.notifier)
-                            .loadRooms(page: state.pageData!.page + 1)
-                        : null,
-                  ),
-                ],
+            AdminFilterBar<bool?>(
+              filters: const [
+                AdminFilter(null, 'All'),
+                AdminFilter(true, 'Available'),
+                AdminFilter(false, 'Delisted'),
+              ],
+              selected: state.availableFilter,
+              onSelected: (v) => controller.loadRooms(available: v, page: 0),
+            ),
+            const SizedBox(height: 14),
+            if (state.error != null) ...[
+              AdminErrorBanner(
+                state.error!,
+                onRetry: () => controller.loadRooms(),
               ),
+              const SizedBox(height: 14),
+            ],
+            if (state.isLoading && page == null)
+              const Padding(
+                padding: EdgeInsets.all(40),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (page == null || page.content.isEmpty)
+              const AdminEmptyState(
+                icon: Icons.bed_outlined,
+                title: 'No listings found',
+                message: 'Try another search or filter.',
+              )
+            else
+              for (final room in page.content) ...[
+                _RoomCard(
+                  room: room,
+                  onOpen: () => _openRoom(room),
+                  onToggle: () =>
+                      controller.toggleAvailability(room.id, room.isAvailable),
+                  onDelete: () => _confirmDelete(room),
+                ),
+                const SizedBox(height: 10),
+              ],
+            if (page != null)
+              AdminPager(
+                page: page.page,
+                totalPages: page.totalPages,
+                totalElements: page.totalElements,
+                onPage: (p) => controller.loadRooms(page: p),
+              ),
+            const SizedBox(height: 24),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// One listing: cover, title, rent, place, host and availability.
+class _RoomCard extends StatelessWidget {
+  const _RoomCard({
+    required this.room,
+    required this.onOpen,
+    required this.onToggle,
+    required this.onDelete,
+  });
+
+  final AdminRoomSummary room;
+  final VoidCallback onOpen;
+  final VoidCallback onToggle;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final phone = context.isPhone;
+    return AdminCard(
+      padding: const EdgeInsets.all(12),
+      onTap: onOpen,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: AdminNetworkImage(
+              url: room.photoUrls.isEmpty ? null : room.photoUrls.first,
+              width: phone ? 72 : 96,
+              height: phone ? 60 : 72,
+              fallbackIcon: room.listingType == 'NEED_ROOM'
+                  ? Icons.person_search_outlined
+                  : Icons.apartment_outlined,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  room.title.isNotEmpty ? room.title : 'Untitled Listing',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall,
+                ),
+                Text(
+                  '₹${room.rentAmount ?? 0} / mo · '
+                  '${room.placeLabel.isNotEmpty ? room.placeLabel : 'Location pending'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    room.isAvailable
+                        ? const AdminChip(
+                            'Available',
+                            tone: ChipTone.ok,
+                            icon: Icons.check_circle_rounded,
+                          )
+                        : const AdminChip(
+                            'Delisted',
+                            icon: Icons.unpublished_rounded,
+                          ),
+                    if (room.roomType != null)
+                      AdminChip(humanizeEnum(room.roomType)),
+                    AdminChip(
+                      room.genderPreference.label,
+                      icon: room.genderPreference.isOpenToAll
+                          ? Icons.groups_outlined
+                          : Icons.person_outline,
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AdminAvatar(
+                          url: room.hostAvatarUrl,
+                          name: room.hostUserName ?? '?',
+                          radius: 10,
+                        ),
+                        const SizedBox(width: 4),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 160),
+                          child: Text(
+                            room.hostUserName ?? 'Unknown host',
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Listing actions',
+            onSelected: (v) => switch (v) {
+              'toggle' => onToggle(),
+              'delete' => onDelete(),
+              _ => onOpen(),
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'open',
+                child: Text('Open room — photos, comments, edit'),
+              ),
+              PopupMenuItem(
+                value: 'toggle',
+                child: Text(room.isAvailable ? 'Delist' : 'Mark available'),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: Text(
+                  'Delete listing',
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
